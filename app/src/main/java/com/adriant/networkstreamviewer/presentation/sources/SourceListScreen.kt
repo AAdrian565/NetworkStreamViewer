@@ -140,7 +140,11 @@ private fun SourceList(
                 Text(source.name, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = source.details?.subtitle() ?: "Stream details unavailable",
+                    text = when {
+                        source.details != null -> source.details.subtitle()
+                        source.isLoadingDetails -> "Loading stream details…"
+                        else -> "Stream details unavailable"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

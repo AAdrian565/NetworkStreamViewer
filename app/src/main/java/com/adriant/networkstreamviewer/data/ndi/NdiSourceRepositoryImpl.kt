@@ -4,12 +4,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.NdiStreamDetails
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
 import com.adriant.networkstreamviewer.domain.repository.NdiSourceRepository
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 class NdiSourceRepositoryImpl : NdiSourceRepository {
@@ -19,23 +14,12 @@ class NdiSourceRepositoryImpl : NdiSourceRepository {
 
     override suspend fun discoverSources(timeoutMs: Int): List<NdiSource> =
         withContext(Dispatchers.IO) {
-            val sources = NdiNative.discoverSources(timeoutMs).toNdiSources()
-            val probeSlots = Semaphore(MAX_CONCURRENT_PROBES)
-            coroutineScope {
-                sources.map { source ->
-                    async {
-                        probeSlots.withPermit {
-                            source.copy(
-                                details = NdiNative.probeSource(
-                                    source.name,
-                                    source.url,
-                                    PROBE_TIMEOUT_MS
-                                ).toStreamDetails()
-                            )
-                        }
-                    }
-                }.awaitAll()
-            }
+            NdiNative.discoverSources(timeoutMs).toNdiSources()
+        }
+
+    override suspend fun probeSource(source: NdiSource): NdiStreamDetails? =
+        withContext(Dispatchers.IO) {
+            NdiNative.probeSource(source.name, source.url, PROBE_TIMEOUT_MS).toStreamDetails()
         }
 
     override fun shutdown() {
@@ -66,6 +50,5 @@ internal fun IntArray?.toStreamDetails(): NdiStreamDetails? {
     )
 }
 
-private const val MAX_CONCURRENT_PROBES = 3
 private const val PROBE_TIMEOUT_MS = 1_500
 private const val STREAM_DETAILS_VALUE_COUNT = 5

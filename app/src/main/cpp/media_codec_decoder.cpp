@@ -35,10 +35,10 @@ MediaCodecDecoder::~MediaCodecDecoder() {
     reset();
 }
 
-bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
+DecodeResult MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     if (frame.p_data == nullptr || frame.data_size_in_bytes < NDIlib_compressed_packet_version_0) {
         log_error("NDI HX frame has an invalid packet buffer");
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
     const auto* packet = reinterpret_cast<const NDIlib_compressed_packet_t*>(frame.p_data);
@@ -46,7 +46,7 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     if (packet->version < NDIlib_compressed_packet_version_0 || packet->version > packet_size ||
         !is_supported_codec(packet->fourCC)) {
         log_error("NDI HX frame has an unsupported packet header");
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
     const uint64_t payload_size = static_cast<uint64_t>(packet->data_size);
@@ -55,7 +55,7 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     if (payload_size + extra_size > available_size ||
         payload_size > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
         log_error("NDI HX frame packet sizes are invalid");
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
     const auto* payload = frame.p_data + packet->version;
@@ -66,7 +66,7 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     if (format_changed) reset();
 
     if (codec_ == nullptr) {
-        if (!keyframe) return true;
+        if (!keyframe) return DecodeResult::WaitingForKeyframe;
         if (!configure(
                 packet->fourCC,
                 frame.xres,
@@ -76,18 +76,18 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
                 extra_data,
                 packet->extra_data_size
             )) {
-            return false;
+            return DecodeResult::DecoderFailure;
         }
     }
 
-    if (!drainOutput()) return false;
+    if (!drainOutput()) return DecodeResult::DecoderFailure;
 
     const ssize_t input_index = AMediaCodec_dequeueInputBuffer(codec_, kInputTimeoutMicroseconds);
-    if (input_index == AMEDIACODEC_INFO_TRY_AGAIN_LATER) return true;
+    if (input_index == AMEDIACODEC_INFO_TRY_AGAIN_LATER) return DecodeResult::Submitted;
     if (input_index < 0) {
         log_error("Could not dequeue an Android video decoder input buffer");
         reset();
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
     size_t input_capacity = 0;
@@ -99,7 +99,7 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     if (input == nullptr || packet->data_size > input_capacity) {
         log_error("NDI HX frame is larger than the Android decoder input buffer");
         AMediaCodec_queueInputBuffer(codec_, static_cast<size_t>(input_index), 0, 0, 0, 0);
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
     std::memcpy(input, payload, packet->data_size);
@@ -114,10 +114,10 @@ bool MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
         ) != AMEDIA_OK) {
         log_error("Could not queue an NDI HX frame for Android video decoding");
         reset();
-        return false;
+        return DecodeResult::DecoderFailure;
     }
 
-    return drainOutput();
+    return drainOutput() ? DecodeResult::Submitted : DecodeResult::DecoderFailure;
 }
 
 void MediaCodecDecoder::reset() {

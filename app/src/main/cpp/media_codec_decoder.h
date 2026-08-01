@@ -4,6 +4,12 @@
 
 #include <Processing.NDI.Advanced.h>
 
+enum class DecodeResult {
+    Submitted,
+    WaitingForKeyframe,
+    DecoderFailure
+};
+
 class MediaCodecDecoder {
 public:
     explicit MediaCodecDecoder(ANativeWindow* window);
@@ -12,7 +18,7 @@ public:
     MediaCodecDecoder(const MediaCodecDecoder&) = delete;
     MediaCodecDecoder& operator=(const MediaCodecDecoder&) = delete;
 
-    bool submit(const NDIlib_video_frame_v2_t& frame);
+    DecodeResult submit(const NDIlib_video_frame_v2_t& frame);
     void reset();
 
 private:

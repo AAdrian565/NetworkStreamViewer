@@ -33,6 +33,8 @@ Keep selection in `NdiViewModel` so rotation preserves playback. The list is por
 
 Receive regular NDI through the Advanced SDK's decompressor and pass NDI HX H.264/H.265 packets to Android MediaCodec. Keep decoder work on the receive thread, wait for a keyframe before configuration, validate compressed packet sizes, and release codec resources before the playback surface.
 
+Publish discovered source names before starting bounded detail probes. Playback must expose connecting, keyframe wait, disconnect, codec, decoder, and bandwidth states instead of leaving a silent black surface. Preserve Automatic, Highest, and Preview/Low receiver modes; Automatic starts high and falls back to preview when video stalls.
+
 Camera publishing is video-only NV12 at up to 1080p with selectable lens and frame rate. Require camera and local-network permissions, keep the camera open only while its screen exists, and stop the NDI sender before changing settings, renaming, or leaving.
 
 Compile C++ with `-Wall -Wextra -Werror`. When changing `NdiNative`, update matching JNI symbols. Pair every NDI, thread, frame, listener global reference, and `ANativeWindow` acquisition with deterministic cleanup.

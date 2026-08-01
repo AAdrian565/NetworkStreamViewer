@@ -35,6 +35,7 @@ NDIlib_send_instance_t g_sender = nullptr;
 ANativeWindow* g_window = nullptr;
 jobject g_aspect_ratio_listener = nullptr;
 jmethodID g_aspect_ratio_method = nullptr;
+jmethodID g_playback_state_method = nullptr;
 JavaVM* g_java_vm = nullptr;
 std::thread g_receive_thread;
 std::atomic_bool g_receiving = false;
@@ -76,23 +77,31 @@ void write_uyvy_pixel(uint8_t* destination, uint8_t y, uint8_t u, uint8_t v) {
     destination[3] = 255;
 }
 
-void render_frame(ANativeWindow* window, const NDIlib_video_frame_v2_t& frame) {
-    if (window == nullptr || frame.p_data == nullptr || frame.xres <= 0 || frame.yres <= 0) return;
+enum class RenderResult {
+    Rendered,
+    UnsupportedFormat,
+    Failure
+};
+
+RenderResult render_frame(ANativeWindow* window, const NDIlib_video_frame_v2_t& frame) {
+    if (window == nullptr || frame.p_data == nullptr || frame.xres <= 0 || frame.yres <= 0) {
+        return RenderResult::Failure;
+    }
     const bool rgba = frame.FourCC == NDIlib_FourCC_type_RGBA ||
         frame.FourCC == NDIlib_FourCC_type_RGBX;
     const bool uyvy = frame.FourCC == NDIlib_FourCC_type_UYVY;
     if (!rgba && !uyvy) {
         log_error("NDI returned an unexpected pixel format");
-        return;
+        return RenderResult::UnsupportedFormat;
     }
 
     if (ANativeWindow_setBuffersGeometry(window, frame.xres, frame.yres, WINDOW_FORMAT_RGBA_8888) != 0) {
         log_error("Could not set the native window geometry");
-        return;
+        return RenderResult::Failure;
     }
 
     ANativeWindow_Buffer buffer{};
-    if (ANativeWindow_lock(window, &buffer, nullptr) != 0) return;
+    if (ANativeWindow_lock(window, &buffer, nullptr) != 0) return RenderResult::Failure;
 
     const int destination_stride = buffer.stride * 4;
     const int rows = std::min(frame.yres, buffer.height);
@@ -130,6 +139,24 @@ void render_frame(ANativeWindow* window, const NDIlib_video_frame_v2_t& frame) {
     }
 
     ANativeWindow_unlockAndPost(window);
+    return RenderResult::Rendered;
+}
+
+void notify_playback_state(
+    JNIEnv* env,
+    jobject listener,
+    jmethodID method,
+    int state,
+    int& last_state
+) {
+    if (state == last_state) return;
+    env->CallVoidMethod(listener, method, state);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        log_error("The playback-state callback failed");
+        return;
+    }
+    last_state = state;
 }
 
 void receive_loop(
@@ -137,7 +164,9 @@ void receive_loop(
     ANativeWindow* window,
     JavaVM* java_vm,
     jobject aspect_ratio_listener,
-    jmethodID aspect_ratio_method
+    jmethodID aspect_ratio_method,
+    jmethodID playback_state_method,
+    bool automatic_bandwidth
 ) {
     JNIEnv* env = nullptr;
     bool attached_to_vm = false;
@@ -150,7 +179,17 @@ void receive_loop(
     }
 
     float last_aspect_ratio = 0.0f;
+    int last_playback_state = -1;
+    bool automatic_fallback_active = false;
+    auto last_video_time = std::chrono::steady_clock::now();
     MediaCodecDecoder hx_decoder(window);
+    notify_playback_state(
+        env,
+        aspect_ratio_listener,
+        playback_state_method,
+        0,
+        last_playback_state
+    );
     while (g_receiving.load()) {
         NDIlib_video_frame_v2_t video{};
         const NDIlib_frame_type_e type = NDIlib_recv_capture_v3(
@@ -162,6 +201,8 @@ void receive_loop(
         );
 
         if (type == NDIlib_frame_type_video && video.xres > 0 && video.yres > 0) {
+            bool terminal_playback_error = false;
+            last_video_time = std::chrono::steady_clock::now();
             const float aspect_ratio = video.picture_aspect_ratio > 0.0f
                 ? video.picture_aspect_ratio
                 : static_cast<float>(video.xres) / static_cast<float>(video.yres);
@@ -174,17 +215,95 @@ void receive_loop(
                 last_aspect_ratio = aspect_ratio;
             }
             if (is_hx_video(video)) {
-                if (!hx_decoder.submit(video)) {
-                    log_error("Could not decode the NDI HX video frame");
+                const DecodeResult decode_result = hx_decoder.submit(video);
+                if (decode_result == DecodeResult::WaitingForKeyframe) {
+                    notify_playback_state(
+                        env,
+                        aspect_ratio_listener,
+                        playback_state_method,
+                        1,
+                        last_playback_state
+                    );
+                } else if (decode_result == DecodeResult::DecoderFailure) {
+                    notify_playback_state(
+                        env,
+                        aspect_ratio_listener,
+                        playback_state_method,
+                        5,
+                        last_playback_state
+                    );
+                    terminal_playback_error = true;
+                } else {
+                    notify_playback_state(
+                        env,
+                        aspect_ratio_listener,
+                        playback_state_method,
+                        2,
+                        last_playback_state
+                    );
                 }
             } else {
                 hx_decoder.reset();
-                render_frame(window, video);
+                const RenderResult render_result = render_frame(window, video);
+                const int state = render_result == RenderResult::Rendered
+                    ? 2
+                    : render_result == RenderResult::UnsupportedFormat ? 4 : 5;
+                notify_playback_state(
+                    env,
+                    aspect_ratio_listener,
+                    playback_state_method,
+                    state,
+                    last_playback_state
+                );
+                terminal_playback_error = render_result != RenderResult::Rendered;
             }
             NDIlib_recv_free_video_v2(receiver, &video);
+            if (terminal_playback_error) break;
         } else if (type == NDIlib_frame_type_error) {
             log_error("The NDI receiver lost its connection");
+            notify_playback_state(
+                env,
+                aspect_ratio_listener,
+                playback_state_method,
+                3,
+                last_playback_state
+            );
             break;
+        } else if (type == NDIlib_frame_type_none) {
+            const auto silent_for = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - last_video_time
+            );
+            if (silent_for >= std::chrono::seconds(2) &&
+                NDIlib_recv_get_no_connections(receiver) == 0) {
+                notify_playback_state(
+                    env,
+                    aspect_ratio_listener,
+                    playback_state_method,
+                    3,
+                    last_playback_state
+                );
+            } else if (silent_for >= std::chrono::seconds(4)) {
+                if (automatic_bandwidth && !automatic_fallback_active &&
+                    NDIlib_recv_set_bandwidth(receiver, NDIlib_recv_bandwidth_lowest)) {
+                    automatic_fallback_active = true;
+                    last_video_time = std::chrono::steady_clock::now();
+                    notify_playback_state(
+                        env,
+                        aspect_ratio_listener,
+                        playback_state_method,
+                        0,
+                        last_playback_state
+                    );
+                } else {
+                    notify_playback_state(
+                        env,
+                        aspect_ratio_listener,
+                        playback_state_method,
+                        6,
+                        last_playback_state
+                    );
+                }
+            }
         }
     }
 
@@ -208,6 +327,7 @@ void stop_receiver_locked(JNIEnv* env) {
         g_aspect_ratio_listener = nullptr;
     }
     g_aspect_ratio_method = nullptr;
+    g_playback_state_method = nullptr;
     g_java_vm = nullptr;
 }
 
@@ -353,6 +473,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
     jstring source_name,
     jstring source_url,
     jobject surface,
+    jint bandwidth,
     jobject aspect_ratio_listener
 ) {
     std::scoped_lock lock(g_lifecycle_mutex);
@@ -367,7 +488,9 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
     settings.color_format = static_cast<NDIlib_recv_color_format_e>(
         NDIlib_recv_color_format_compressed_v4
     );
-    settings.bandwidth = NDIlib_recv_bandwidth_highest;
+    settings.bandwidth = bandwidth == 2
+        ? NDIlib_recv_bandwidth_lowest
+        : NDIlib_recv_bandwidth_highest;
     settings.allow_video_fields = false;
     settings.p_ndi_recv_name = "Network Stream Viewer";
 
@@ -391,14 +514,21 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         "onVideoAspectRatioChanged",
         "(F)V"
     );
+    g_playback_state_method = env->GetMethodID(
+        listener_class,
+        "onPlaybackStateChanged",
+        "(I)V"
+    );
     env->DeleteLocalRef(listener_class);
-    if (g_aspect_ratio_method == nullptr || env->GetJavaVM(&g_java_vm) != JNI_OK) {
+    if (g_aspect_ratio_method == nullptr || g_playback_state_method == nullptr ||
+        env->GetJavaVM(&g_java_vm) != JNI_OK) {
         if (env->ExceptionCheck()) env->ExceptionClear();
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
         ANativeWindow_release(g_window);
         g_window = nullptr;
         g_aspect_ratio_method = nullptr;
+        g_playback_state_method = nullptr;
         g_java_vm = nullptr;
         log_error("Could not prepare the video aspect-ratio callback");
         return JNI_FALSE;
@@ -410,6 +540,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         ANativeWindow_release(g_window);
         g_window = nullptr;
         g_aspect_ratio_method = nullptr;
+        g_playback_state_method = nullptr;
         g_java_vm = nullptr;
         return JNI_FALSE;
     }
@@ -421,7 +552,9 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_window,
         g_java_vm,
         g_aspect_ratio_listener,
-        g_aspect_ratio_method
+        g_aspect_ratio_method,
+        g_playback_state_method,
+        bandwidth == 0
     );
     return JNI_TRUE;
 }

@@ -8,11 +8,16 @@ import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.repository.NdiSourceRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class NdiViewModel(
     private val repository: NdiSourceRepository
@@ -21,10 +26,12 @@ class NdiViewModel(
     val uiState: StateFlow<NdiUiState> = mutableUiState.asStateFlow()
 
     private var discoveryJob: Job? = null
+    private var detailsJob: Job? = null
     private var refreshGeneration = 0
 
     fun refreshSources() {
         discoveryJob?.cancel()
+        detailsJob?.cancel()
         val generation = ++refreshGeneration
 
         discoveryJob = viewModelScope.launch {
@@ -41,7 +48,10 @@ class NdiViewModel(
                 repeat(DISCOVERY_ATTEMPTS) {
                     val sources = repository.discoverSources(DISCOVERY_TIMEOUT_MS)
                     mutableUiState.update { it.copy(sources = sources, errorMessage = null) }
-                    if (sources.isNotEmpty()) return@launch
+                    if (sources.isNotEmpty()) {
+                        loadSourceDetails(sources, generation)
+                        return@launch
+                    }
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -63,7 +73,42 @@ class NdiViewModel(
         refreshGeneration++
         discoveryJob?.cancel()
         discoveryJob = null
+        detailsJob?.cancel()
+        detailsJob = null
         mutableUiState.update { it.copy(isRefreshing = false) }
+    }
+
+    private fun loadSourceDetails(sources: List<NdiSource>, generation: Int) {
+        detailsJob?.cancel()
+        detailsJob = viewModelScope.launch {
+            val slots = Semaphore(MAX_CONCURRENT_PROBES)
+            supervisorScope {
+                sources.map { source ->
+                    async {
+                        val details = try {
+                            slots.withPermit { repository.probeSource(source) }
+                        } catch (cancellation: CancellationException) {
+                            throw cancellation
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (generation == refreshGeneration) {
+                            mutableUiState.update { state ->
+                                state.copy(
+                                    sources = state.sources.map { current ->
+                                        if (current.name == source.name && current.url == source.url) {
+                                            current.copy(details = details, isLoadingDetails = false)
+                                        } else {
+                                            current
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
+        }
     }
 
     fun selectSource(source: NdiSource) {
@@ -103,5 +148,6 @@ class NdiViewModel(
     private companion object {
         const val DISCOVERY_TIMEOUT_MS = 1_000
         const val DISCOVERY_ATTEMPTS = 5
+        const val MAX_CONCURRENT_PROBES = 3
     }
 }

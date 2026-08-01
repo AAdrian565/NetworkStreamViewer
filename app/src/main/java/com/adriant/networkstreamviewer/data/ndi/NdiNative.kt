@@ -14,7 +14,8 @@ internal object NdiNative {
         name: String,
         url: String,
         surface: Surface,
-        aspectRatioListener: VideoAspectRatioListener
+        bandwidth: Int,
+        listener: NdiPlaybackListener
     ): Boolean
     external fun stopReceiver()
     external fun startSender(name: String): Boolean
@@ -29,6 +30,7 @@ internal object NdiNative {
     external fun shutdown()
 }
 
-fun interface VideoAspectRatioListener {
+interface NdiPlaybackListener {
     fun onVideoAspectRatioChanged(aspectRatio: Float)
+    fun onPlaybackStateChanged(state: Int)
 }

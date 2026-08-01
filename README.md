@@ -32,6 +32,17 @@ The NDI SDK directory must contain `include/Processing.NDI.Lib.h` and ABI-specif
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+Convenience targets are also available:
+
+```bash
+make devices                  # List connected devices and their serials
+make install                  # Auto-detect one device, then build and install
+make install ADB_SERIAL=ID    # Select a device when several are connected
+make release                  # Build the release APK
+```
+
+The current release build is unsigned until a release signing configuration is added.
+
 ## Device testing
 
 Use a physical Android device on the same LAN as an active NDI sender. Allow the local-network permission when prompted. Wi-Fi client isolation, blocked mDNS traffic, or separate VLANs can prevent discovery.

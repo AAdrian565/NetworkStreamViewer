@@ -9,7 +9,7 @@ This Android app uses Kotlin, Compose, C++, and JNI. Preserve these layers:
 - `data/camera/` owns Camera2 capture, YUV conversion, and sender lifecycle.
 - `presentation/` contains `NdiViewModel`, UI state, permissions, orientation, source list, player, and camera sender UI.
 - `MainActivity.kt` is only the Compose entry point.
-- `app/src/main/cpp/` contains JNI rendering and CMake configuration.
+- `app/src/main/cpp/` contains JNI rendering, NDI HX MediaCodec decoding, and CMake configuration.
 
 Place JVM tests in `app/src/test/` and device tests in `app/src/androidTest/`. Never edit `build/`, `app/build/`, or `.cxx/` output.
 
@@ -30,6 +30,8 @@ Use four-space indentation, `PascalCase` for types/composables, `camelCase` for 
 Expose `StateFlow` from `NdiViewModel`. Keep blocking SDK calls on `Dispatchers.IO`; presentation must not call native functions directly. Discovery is bounded to five one-second attempts. It must stop its indicator, show an empty state, and restart from pull-down or button refresh. Handle cancellation separately from failures.
 
 Keep selection in `NdiViewModel` so rotation preserves playback. The list is portrait; playback is sensor-landscape and immersive. Restore system bars on exit. Fit-scale the NDI display aspect ratio; never stretch or crop silently.
+
+Receive regular NDI through the Advanced SDK's decompressor and pass NDI HX H.264/H.265 packets to Android MediaCodec. Keep decoder work on the receive thread, wait for a keyframe before configuration, validate compressed packet sizes, and release codec resources before the playback surface.
 
 Camera publishing is video-only NV12 at up to 1080p with selectable lens and frame rate. Require camera and local-network permissions, keep the camera open only while its screen exists, and stop the NDI sender before changing settings, renaming, or leaving.
 

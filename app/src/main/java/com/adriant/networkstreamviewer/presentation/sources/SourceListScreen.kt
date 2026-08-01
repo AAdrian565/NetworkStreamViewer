@@ -26,6 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import com.adriant.networkstreamviewer.domain.model.NdiStreamDetails
+import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
+import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun SourceListScreen(
@@ -133,8 +138,30 @@ private fun SourceList(
                     .padding(vertical = 18.dp)
             ) {
                 Text(source.name, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = source.details?.subtitle() ?: "Stream details unavailable",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             HorizontalDivider()
         }
     }
+}
+
+private fun NdiStreamDetails.subtitle(): String {
+    val framesPerSecond = frameRateNumerator.toDouble() / frameRateDenominator
+    val roundedFramesPerSecond = framesPerSecond.roundToInt()
+    val frameRateText = if (abs(framesPerSecond - roundedFramesPerSecond) < 0.005) {
+        roundedFramesPerSecond.toString()
+    } else {
+        String.format(Locale.US, "%.2f", framesPerSecond)
+    }
+    val formatText = when (format) {
+        NdiVideoFormat.FULL_NDI -> "Full NDI"
+        NdiVideoFormat.HX_H264 -> "NDI HX (H.264)"
+        NdiVideoFormat.HX_HEVC -> "NDI HX (HEVC)"
+    }
+    return "${width}×$height • $frameRateText fps • $formatText"
 }

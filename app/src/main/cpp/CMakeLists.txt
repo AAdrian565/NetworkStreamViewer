@@ -8,15 +8,24 @@ endif()
 
 add_library(ndi SHARED IMPORTED)
 set_target_properties(ndi PROPERTIES
-    IMPORTED_LOCATION "${NDI_SDK_DIR}/lib/${ANDROID_ABI}/libndi.so"
+    IMPORTED_LOCATION "${NDI_SDK_DIR}/lib/${ANDROID_ABI}/libndi_advanced.so"
 )
 
-add_library(ndi_bridge SHARED ndi_bridge.cpp)
+add_library(ndi_bridge SHARED
+    media_codec_decoder.cpp
+    ndi_bridge.cpp
+)
 target_include_directories(ndi_bridge PRIVATE "${NDI_SDK_DIR}/include")
 target_compile_features(ndi_bridge PRIVATE cxx_std_17)
 target_compile_options(ndi_bridge PRIVATE -Wall -Wextra -Werror)
 
 find_library(android-lib android REQUIRED)
 find_library(log-lib log REQUIRED)
+find_library(mediandk-lib mediandk REQUIRED)
 
-target_link_libraries(ndi_bridge PRIVATE ndi ${android-lib} ${log-lib})
+target_link_libraries(ndi_bridge PRIVATE
+    ndi
+    ${android-lib}
+    ${log-lib}
+    ${mediandk-lib}
+)

@@ -9,6 +9,7 @@ internal object NdiNative {
 
     external fun initialize(): Boolean
     external fun discoverSources(timeoutMs: Int): Array<String>
+    external fun probeSource(name: String, url: String, timeoutMs: Int): IntArray?
     external fun startReceiver(
         name: String,
         url: String,

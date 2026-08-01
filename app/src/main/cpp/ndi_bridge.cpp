@@ -21,9 +21,11 @@ constexpr char kLogTag[] = "NdiBridge";
 
 std::mutex g_lifecycle_mutex;
 std::mutex g_finder_mutex;
+std::mutex g_sender_mutex;
 bool g_initialized = false;
 NDIlib_find_instance_t g_finder = nullptr;
 NDIlib_recv_instance_t g_receiver = nullptr;
+NDIlib_send_instance_t g_sender = nullptr;
 ANativeWindow* g_window = nullptr;
 jobject g_aspect_ratio_listener = nullptr;
 jmethodID g_aspect_ratio_method = nullptr;
@@ -138,6 +140,13 @@ void stop_receiver_locked(JNIEnv* env) {
     }
     g_aspect_ratio_method = nullptr;
     g_java_vm = nullptr;
+}
+
+void stop_sender_locked() {
+    if (g_sender != nullptr) {
+        NDIlib_send_destroy(g_sender);
+        g_sender = nullptr;
+    }
 }
 
 std::string from_java_string(JNIEnv* env, jstring value) {
@@ -289,10 +298,97 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_stopReceiver(JNIEnv* env
     stop_receiver_locked(env);
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startSender(
+    JNIEnv* env,
+    jobject,
+    jstring sender_name
+) {
+    std::scoped_lock lifecycle_lock(g_lifecycle_mutex);
+    if (!g_initialized) return JNI_FALSE;
+
+    const std::string name = from_java_string(env, sender_name);
+    if (name.empty()) return JNI_FALSE;
+
+    std::scoped_lock sender_lock(g_sender_mutex);
+    stop_sender_locked();
+
+    NDIlib_send_create_t settings{};
+    settings.p_ndi_name = name.c_str();
+    settings.p_groups = nullptr;
+    settings.clock_video = true;
+    settings.clock_audio = false;
+    g_sender = NDIlib_send_create(&settings);
+    if (g_sender == nullptr) {
+        log_error("NDIlib_send_create failed");
+        return JNI_FALSE;
+    }
+    return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_sendVideoFrame(
+    JNIEnv* env,
+    jobject,
+    jbyteArray nv12_data,
+    jint width,
+    jint height,
+    jint frame_rate
+) {
+    if (nv12_data == nullptr || width <= 0 || height <= 0 ||
+        width % 2 != 0 || height % 2 != 0 || frame_rate <= 0) {
+        return JNI_FALSE;
+    }
+
+    const jlong expected_size =
+        static_cast<jlong>(width) * static_cast<jlong>(height) * 3L / 2L;
+    if (env->GetArrayLength(nv12_data) < expected_size) return JNI_FALSE;
+
+    std::scoped_lock sender_lock(g_sender_mutex);
+    if (g_sender == nullptr) return JNI_FALSE;
+
+    jbyte* data = env->GetByteArrayElements(nv12_data, nullptr);
+    if (data == nullptr) return JNI_FALSE;
+
+    NDIlib_video_frame_v2_t frame{};
+    frame.xres = width;
+    frame.yres = height;
+    frame.FourCC = NDIlib_FourCC_type_NV12;
+    frame.frame_rate_N = frame_rate;
+    frame.frame_rate_D = 1;
+    frame.picture_aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+    frame.frame_format_type = NDIlib_frame_format_type_progressive;
+    frame.timecode = NDIlib_send_timecode_synthesize;
+    frame.p_data = reinterpret_cast<uint8_t*>(data);
+    frame.line_stride_in_bytes = width;
+    frame.p_metadata = nullptr;
+    frame.timestamp = 0;
+    NDIlib_send_send_video_v2(g_sender, &frame);
+
+    env->ReleaseByteArrayElements(nv12_data, data, JNI_ABORT);
+    return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_senderConnectionCount(JNIEnv*, jobject) {
+    std::scoped_lock lock(g_sender_mutex);
+    if (g_sender == nullptr) return 0;
+    return NDIlib_send_get_no_connections(g_sender, 0);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_stopSender(JNIEnv*, jobject) {
+    std::scoped_lock lock(g_sender_mutex);
+    stop_sender_locked();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_shutdown(JNIEnv* env, jobject) {
     std::scoped_lock lifecycle_lock(g_lifecycle_mutex);
     stop_receiver_locked(env);
+
+    std::scoped_lock sender_lock(g_sender_mutex);
+    stop_sender_locked();
 
     std::scoped_lock finder_lock(g_finder_mutex);
     if (g_finder != nullptr) {

@@ -74,6 +74,17 @@ class NdiViewModel(
         mutableUiState.update { it.copy(selectedSource = null) }
     }
 
+    fun openCameraSender() {
+        stopDiscovery()
+        mutableUiState.update {
+            it.copy(isCameraSenderOpen = true, selectedSource = null)
+        }
+    }
+
+    fun closeCameraSender() {
+        mutableUiState.update { it.copy(isCameraSenderOpen = false) }
+    }
+
     override fun onCleared() {
         stopDiscovery()
         repository.shutdown()

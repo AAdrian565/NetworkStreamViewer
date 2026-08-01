@@ -5,8 +5,9 @@
 This Android app uses Kotlin, Compose, C++, and JNI. Preserve these layers:
 
 - `domain/` contains models and repository contracts.
-- `data/ndi/` owns `NdiNative`, SDK adapters, discovery, and player control.
-- `presentation/` contains `NdiViewModel`, UI state, permissions, orientation, source list, and player.
+- `data/ndi/` owns `NdiNative`, SDK adapters, discovery, player control, and JNI sender calls.
+- `data/camera/` owns Camera2 capture, YUV conversion, and sender lifecycle.
+- `presentation/` contains `NdiViewModel`, UI state, permissions, orientation, source list, player, and camera sender UI.
 - `MainActivity.kt` is only the Compose entry point.
 - `app/src/main/cpp/` contains JNI rendering and CMake configuration.
 
@@ -29,6 +30,8 @@ Use four-space indentation, `PascalCase` for types/composables, `camelCase` for 
 Expose `StateFlow` from `NdiViewModel`. Keep blocking SDK calls on `Dispatchers.IO`; presentation must not call native functions directly. Discovery is bounded to five one-second attempts. It must stop its indicator, show an empty state, and restart from pull-down or button refresh. Handle cancellation separately from failures.
 
 Keep selection in `NdiViewModel` so rotation preserves playback. The list is portrait; playback is sensor-landscape and immersive. Restore system bars on exit. Fit-scale the NDI display aspect ratio; never stretch or crop silently.
+
+Camera publishing is video-only NV12 at up to 1080p with selectable lens and frame rate. Require camera and local-network permissions, keep the camera open only while its screen exists, and stop the NDI sender before changing settings, renaming, or leaving.
 
 Compile C++ with `-Wall -Wextra -Werror`. When changing `NdiNative`, update matching JNI symbols. Pair every NDI, thread, frame, listener global reference, and `ANativeWindow` acquisition with deterministic cleanup.
 

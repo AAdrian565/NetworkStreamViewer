@@ -8,6 +8,7 @@ data class NdiUiState(
     val hasCompletedRefresh: Boolean = false,
     val sources: List<NdiSource> = emptyList(),
     val selectedSource: NdiSource? = null,
+    val isCameraSenderOpen: Boolean = false,
     val errorMessage: String? = null
 ) {
     val statusMessage: String

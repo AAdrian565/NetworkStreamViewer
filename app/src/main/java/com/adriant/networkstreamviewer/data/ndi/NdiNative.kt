@@ -16,6 +16,15 @@ internal object NdiNative {
         aspectRatioListener: VideoAspectRatioListener
     ): Boolean
     external fun stopReceiver()
+    external fun startSender(name: String): Boolean
+    external fun sendVideoFrame(
+        nv12Data: ByteArray,
+        width: Int,
+        height: Int,
+        frameRate: Int
+    ): Boolean
+    external fun senderConnectionCount(): Int
+    external fun stopSender()
     external fun shutdown()
 }
 

@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adriant.networkstreamviewer.data.ndi.NdiPlayerController
+import com.adriant.networkstreamviewer.presentation.camera.CameraSenderScreen
 import com.adriant.networkstreamviewer.presentation.player.PlayerScreen
 import com.adriant.networkstreamviewer.presentation.sources.SourceListScreen
 
@@ -37,6 +38,20 @@ fun NdiApp(
         return
     }
 
+    if (uiState.isCameraSenderOpen) {
+        val closeCameraSender = {
+            viewModel.closeCameraSender()
+            if (permission.isGranted) viewModel.refreshSources()
+        }
+        BackHandler(onBack = closeCameraSender)
+        CameraSenderScreen(
+            localNetworkPermissionGranted = permission.isGranted,
+            onRequestLocalNetworkPermission = permission.request,
+            onBack = closeCameraSender
+        )
+        return
+    }
+
     SourceListScreen(
         sources = uiState.sources,
         status = if (permission.isGranted) {
@@ -48,6 +63,7 @@ fun NdiApp(
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refreshSources,
         onRequestPermission = permission.request,
+        onOpenCameraSender = viewModel::openCameraSender,
         onSourceSelected = viewModel::selectSource
     )
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -34,6 +35,7 @@ fun SourceListScreen(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onRequestPermission: () -> Unit,
+    onOpenCameraSender: () -> Unit,
     onSourceSelected: (NdiSource) -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -47,6 +49,13 @@ fun SourceListScreen(
             Text("Network streams", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(8.dp))
             Text(status, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = onOpenCameraSender,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Stream this camera to NDI®")
+            }
             Spacer(Modifier.height(20.dp))
 
             Box(

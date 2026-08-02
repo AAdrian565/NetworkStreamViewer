@@ -20,8 +20,14 @@ Place JVM tests in `app/src/test/` and device tests in `app/src/androidTest/`. N
 - `./gradlew connectedDebugAndroidTest` — run AndroidX tests on a connected device.
 - `./gradlew lintDebug` — run lint; reports appear under `app/build/reports/`.
 - `./gradlew installDebug` — install through ADB.
+- `make install` — build, install, and open the debug APK through ADB.
+- `make install-release` — build, install, and open the signed release APK.
+- `make install BUILD_TYPE=release` — equivalent to `make install-release`.
+- `make release` — remove stale release APK names, build the signed release, and print its versioned path.
 
 Test on a physical device on the same LAN as an active NDI sender.
+
+Release versions are configured in the tracked root `gradle.properties` using `VERSION_NAME` (SemVer) and an increasing integer `VERSION_CODE`. The release artifact is named `NetworkStreamViewer-v<version>.apk`, for example `NetworkStreamViewer-v1.0.0.apk`, under `app/build/outputs/apk/release/`. Update both version properties before a release.
 
 ## Coding Style & Behavioral Invariants
 
@@ -50,3 +56,5 @@ No history is available to infer a convention. Use short imperative subjects, op
 ## Security & Configuration
 
 Keep `local.properties` untracked and set `ndi.sdk.dir` to the licensed SDK. Never commit NDI binaries, proprietary headers, licenses, signing keys, or machine paths. Preserve NDI attribution and API-37 local-network permission behavior.
+
+Release signing properties belong in the ignored `gradle/gradle.properties` or user-level `~/.gradle/gradle.properties`. When present, the same private keystore signs both debug and release builds. Keep the keystore and all four signing properties private. GitHub Actions CI/CD is not configured; release APKs are built locally and manually uploaded to GitHub Releases.

@@ -1,5 +1,7 @@
 import java.util.Properties
 
+import com.android.build.api.variant.ApplicationVariant
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -11,6 +13,36 @@ val localProperties = Properties().apply {
 val ndiSdkDir = localProperties.getProperty("ndi.sdk.dir")
     ?: error("Add ndi.sdk.dir=/path/to/NDI SDK for Android to local.properties")
 
+val localSigningProperties = Properties().apply {
+    val signingFile = rootProject.file("gradle/gradle.properties")
+    if (signingFile.isFile) {
+        signingFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingProperty(name: String): String? =
+    localSigningProperties.getProperty(name)
+        ?: providers.gradleProperty(name).orNull
+
+val releaseStoreFile = signingProperty("NETWORKSTREAMVIEWER_STORE_FILE")
+val releaseStorePassword = signingProperty("NETWORKSTREAMVIEWER_STORE_PASSWORD")
+val releaseKeyAlias = signingProperty("NETWORKSTREAMVIEWER_KEY_ALIAS")
+val releaseKeyPassword = signingProperty("NETWORKSTREAMVIEWER_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
+if (!hasReleaseSigning && gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
+    error(
+        "Release signing is not configured. Add NETWORKSTREAMVIEWER_STORE_FILE, " +
+            "NETWORKSTREAMVIEWER_STORE_PASSWORD, NETWORKSTREAMVIEWER_KEY_ALIAS, and " +
+            "NETWORKSTREAMVIEWER_KEY_PASSWORD to gradle/gradle.properties or ~/.gradle/gradle.properties.",
+    )
+}
+
 android {
     namespace = "com.adriant.networkstreamviewer"
     compileSdk {
@@ -21,8 +53,11 @@ android {
         applicationId = "com.adriant.networkstreamviewer"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = providers.gradleProperty("VERSION_CODE")
+            .map(String::toInt)
+            .getOrElse(1)
+        versionName = providers.gradleProperty("VERSION_NAME")
+            .getOrElse("0.1.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -34,8 +69,27 @@ android {
         }
     }
 
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = false
             }
@@ -55,6 +109,14 @@ android {
     }
     sourceSets {
         getByName("main").jniLibs.directories.add("$ndiSdkDir/lib")
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        (variant as? ApplicationVariant)?.outputs?.forEach { output ->
+            output.outputFileName.set("NetworkStreamViewer-v${output.versionName.get()}.apk")
+        }
     }
 }
 

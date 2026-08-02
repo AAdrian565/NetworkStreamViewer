@@ -41,10 +41,33 @@ Convenience targets are also available:
 make devices                  # List connected devices and their serials
 make install                  # Auto-detect one device, then build and install
 make install ADB_SERIAL=ID    # Select a device when several are connected
+make install-release           # Build, install, and open the signed release app
+make install BUILD_TYPE=release # Equivalent to make install-release
 make release                  # Build the release APK
 ```
 
-The current release build is unsigned until a release signing configuration is added.
+The version is controlled in `gradle.properties` with `VERSION_NAME` (SemVer) and `VERSION_CODE` (an increasing integer). Update both values before building a release.
+
+### Release signing
+
+The release APK is signed with your own keystore for GitHub distribution. Keep the keystore and passwords out of Git. You can use the untracked `gradle/gradle.properties` file or your user-level `~/.gradle/gradle.properties` file:
+
+```properties
+NETWORKSTREAMVIEWER_STORE_FILE=/absolute/path/to/networkstreamviewer-release.jks
+NETWORKSTREAMVIEWER_STORE_PASSWORD=your-keystore-password
+NETWORKSTREAMVIEWER_KEY_ALIAS=networkstreamviewer
+NETWORKSTREAMVIEWER_KEY_PASSWORD=your-key-password
+```
+
+Build the signed release with:
+
+```bash
+make release
+```
+
+The signed APK is written to `app/build/outputs/apk/release/NetworkStreamViewer-v1.0.0.apk` (with the current version in the filename). Back up the keystore: future updates must use the same signing key.
+
+When the signing properties are present, both debug and release APKs use this same keystore. This allows a debug APK to be updated directly by a release APK without uninstalling it. Keep the keystore private because debug builds now have the same signing identity as releases.
 
 ## Device testing
 

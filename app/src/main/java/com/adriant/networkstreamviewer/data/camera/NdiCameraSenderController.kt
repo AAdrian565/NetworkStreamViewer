@@ -9,7 +9,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
-import android.media.Image
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
@@ -20,7 +19,6 @@ import android.view.Surface
 import com.adriant.networkstreamviewer.data.ndi.NdiNative
 import com.adriant.networkstreamviewer.domain.model.CameraLens
 import com.adriant.networkstreamviewer.domain.model.CameraSenderSettings
-import java.nio.ByteBuffer
 import kotlin.math.abs
 
 class NdiCameraSenderController(
@@ -41,7 +39,7 @@ class NdiCameraSenderController(
     private var imageReader: ImageReader? = null
     private var previewSurface: Surface? = null
     private var generation = 0
-    private var nv12Buffer = ByteArray(0)
+    private val nv12Converter = Yuv420ToNv12Converter()
     private var sentFrameCount = 0L
 
     @Volatile
@@ -222,7 +220,7 @@ class NdiCameraSenderController(
 
         try {
             if (!streaming) return
-            val nv12 = imageToNv12(image)
+            val nv12 = nv12Converter.convert(image)
             if (!NdiNative.sendVideoFrame(nv12, image.width, image.height, activeFrameRate)) {
                 streaming = false
                 NdiNative.stopSender()
@@ -243,59 +241,6 @@ class NdiCameraSenderController(
             notifyError("The camera frame could not be converted for NDI®.")
         } finally {
             image.close()
-        }
-    }
-
-    private fun imageToNv12(image: Image): ByteArray {
-        require(image.format == ImageFormat.YUV_420_888 && image.planes.size == 3)
-        val width = image.width
-        val height = image.height
-        val requiredSize = width * height * 3 / 2
-        if (nv12Buffer.size != requiredSize) nv12Buffer = ByteArray(requiredSize)
-
-        copyPlane(
-            plane = image.planes[0],
-            planeWidth = width,
-            planeHeight = height,
-            output = nv12Buffer,
-            outputOffset = 0,
-            outputPixelStride = 1
-        )
-        copyPlane(
-            plane = image.planes[1],
-            planeWidth = width / 2,
-            planeHeight = height / 2,
-            output = nv12Buffer,
-            outputOffset = width * height,
-            outputPixelStride = 2
-        )
-        copyPlane(
-            plane = image.planes[2],
-            planeWidth = width / 2,
-            planeHeight = height / 2,
-            output = nv12Buffer,
-            outputOffset = width * height + 1,
-            outputPixelStride = 2
-        )
-        return nv12Buffer
-    }
-
-    private fun copyPlane(
-        plane: Image.Plane,
-        planeWidth: Int,
-        planeHeight: Int,
-        output: ByteArray,
-        outputOffset: Int,
-        outputPixelStride: Int
-    ) {
-        val buffer: ByteBuffer = plane.buffer
-        val inputOffset = buffer.position()
-        for (row in 0 until planeHeight) {
-            for (column in 0 until planeWidth) {
-                val inputIndex = inputOffset + row * plane.rowStride + column * plane.pixelStride
-                val outputIndex = outputOffset + (row * planeWidth + column) * outputPixelStride
-                output[outputIndex] = buffer.get(inputIndex)
-            }
         }
     }
 

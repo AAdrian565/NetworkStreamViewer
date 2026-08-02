@@ -9,13 +9,27 @@ IMAGE_MAGICK ?= convert
 DEBUG_APK := app/build/outputs/apk/debug/app-debug.apk
 APP_COMPONENT := com.adriant.networkstreamviewer/.MainActivity
 RELEASE_DIR := app/build/outputs/apk/release
+RELEASE_APK := $(RELEASE_DIR)/app-release.apk
 ICON_ARTWORK := app/src/main/res/drawable-nodpi/ic_launcher_artwork.png
 
-.PHONY: help devices debug install release icon clean
+BUILD_TYPE ?= debug
+ifeq ($(BUILD_TYPE),debug)
+INSTALL_TARGET := debug
+INSTALL_APK := $(DEBUG_APK)
+else ifeq ($(BUILD_TYPE),release)
+INSTALL_TARGET := release
+INSTALL_APK := $(RELEASE_APK)
+else
+$(error BUILD_TYPE must be either debug or release)
+endif
+
+.PHONY: help devices debug install install-release release icon clean
 
 help:
 	@printf '%s\n' \
 		'make install                 Build, install, and open the debug app through ADB' \
+		'make install-release         Build, install, and open the signed release app' \
+		'make install BUILD_TYPE=release  Same as make install-release' \
 		'make devices                 List connected devices and their serials' \
 		'make release                 Build the release APK' \
 		'make debug                   Build the debug APK only' \
@@ -64,9 +78,12 @@ install:
 			exit 1 ;; \
 	esac; \
 	printf 'Installing to ADB device: %s\n' "$$serial"; \
-	$(MAKE) --no-print-directory debug && \
-	'$(ADB)' -s "$$serial" install -r '$(DEBUG_APK)' && \
+	$(MAKE) --no-print-directory $(INSTALL_TARGET) && \
+	'$(ADB)' -s "$$serial" install -r '$(INSTALL_APK)' && \
 	'$(ADB)' -s "$$serial" shell am start -n '$(APP_COMPONENT)'
+
+install-release:
+	$(MAKE) --no-print-directory install BUILD_TYPE=release
 
 release:
 	$(GRADLEW) assembleRelease

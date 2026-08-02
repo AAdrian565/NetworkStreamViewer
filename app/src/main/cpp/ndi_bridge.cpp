@@ -36,6 +36,7 @@ ANativeWindow* g_window = nullptr;
 jobject g_aspect_ratio_listener = nullptr;
 jmethodID g_aspect_ratio_method = nullptr;
 jmethodID g_playback_state_method = nullptr;
+jmethodID g_ptz_support_method = nullptr;
 JavaVM* g_java_vm = nullptr;
 std::thread g_receive_thread;
 std::atomic_bool g_receiving = false;
@@ -159,6 +160,24 @@ void notify_playback_state(
     last_state = state;
 }
 
+void notify_ptz_support(
+    JNIEnv* env,
+    jobject listener,
+    jmethodID method,
+    bool is_supported,
+    int& last_support_state
+) {
+    const int support_state = is_supported ? 1 : 0;
+    if (support_state == last_support_state) return;
+    env->CallVoidMethod(listener, method, is_supported ? JNI_TRUE : JNI_FALSE);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        log_error("The PTZ-support callback failed");
+        return;
+    }
+    last_support_state = support_state;
+}
+
 void receive_loop(
     NDIlib_recv_instance_t receiver,
     ANativeWindow* window,
@@ -166,6 +185,7 @@ void receive_loop(
     jobject aspect_ratio_listener,
     jmethodID aspect_ratio_method,
     jmethodID playback_state_method,
+    jmethodID ptz_support_method,
     bool automatic_bandwidth
 ) {
     JNIEnv* env = nullptr;
@@ -180,6 +200,7 @@ void receive_loop(
 
     float last_aspect_ratio = 0.0f;
     int last_playback_state = -1;
+    int last_ptz_support_state = -1;
     bool automatic_fallback_active = false;
     auto last_video_time = std::chrono::steady_clock::now();
     MediaCodecDecoder hx_decoder(window);
@@ -189,6 +210,13 @@ void receive_loop(
         playback_state_method,
         0,
         last_playback_state
+    );
+    notify_ptz_support(
+        env,
+        aspect_ratio_listener,
+        ptz_support_method,
+        NDIlib_recv_ptz_is_supported(receiver),
+        last_ptz_support_state
     );
     while (g_receiving.load()) {
         NDIlib_video_frame_v2_t video{};
@@ -259,6 +287,14 @@ void receive_loop(
             }
             NDIlib_recv_free_video_v2(receiver, &video);
             if (terminal_playback_error) break;
+        } else if (type == NDIlib_frame_type_status_change) {
+            notify_ptz_support(
+                env,
+                aspect_ratio_listener,
+                ptz_support_method,
+                NDIlib_recv_ptz_is_supported(receiver),
+                last_ptz_support_state
+            );
         } else if (type == NDIlib_frame_type_error) {
             log_error("The NDI receiver lost its connection");
             notify_playback_state(
@@ -315,6 +351,11 @@ void stop_receiver_locked(JNIEnv* env) {
     if (g_receive_thread.joinable()) g_receive_thread.join();
 
     if (g_receiver != nullptr) {
+        if (NDIlib_recv_ptz_is_supported(g_receiver)) {
+            NDIlib_recv_ptz_pan_tilt_speed(g_receiver, 0.0f, 0.0f);
+            NDIlib_recv_ptz_zoom_speed(g_receiver, 0.0f);
+            NDIlib_recv_ptz_focus_speed(g_receiver, 0.0f);
+        }
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
     }
@@ -328,6 +369,7 @@ void stop_receiver_locked(JNIEnv* env) {
     }
     g_aspect_ratio_method = nullptr;
     g_playback_state_method = nullptr;
+    g_ptz_support_method = nullptr;
     g_java_vm = nullptr;
 }
 
@@ -519,9 +561,14 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         "onPlaybackStateChanged",
         "(I)V"
     );
+    g_ptz_support_method = env->GetMethodID(
+        listener_class,
+        "onPtzSupportChanged",
+        "(Z)V"
+    );
     env->DeleteLocalRef(listener_class);
     if (g_aspect_ratio_method == nullptr || g_playback_state_method == nullptr ||
-        env->GetJavaVM(&g_java_vm) != JNI_OK) {
+        g_ptz_support_method == nullptr || env->GetJavaVM(&g_java_vm) != JNI_OK) {
         if (env->ExceptionCheck()) env->ExceptionClear();
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
@@ -529,8 +576,9 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_window = nullptr;
         g_aspect_ratio_method = nullptr;
         g_playback_state_method = nullptr;
+        g_ptz_support_method = nullptr;
         g_java_vm = nullptr;
-        log_error("Could not prepare the video aspect-ratio callback");
+        log_error("Could not prepare the playback callbacks");
         return JNI_FALSE;
     }
     g_aspect_ratio_listener = env->NewGlobalRef(aspect_ratio_listener);
@@ -541,6 +589,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_window = nullptr;
         g_aspect_ratio_method = nullptr;
         g_playback_state_method = nullptr;
+        g_ptz_support_method = nullptr;
         g_java_vm = nullptr;
         return JNI_FALSE;
     }
@@ -554,9 +603,51 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_aspect_ratio_listener,
         g_aspect_ratio_method,
         g_playback_state_method,
+        g_ptz_support_method,
         bandwidth == 0
     );
     return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_recallPtzPreset(
+    JNIEnv*,
+    jobject,
+    jint preset_number,
+    jfloat speed
+) {
+    if (preset_number < 0 || preset_number > 99 || !std::isfinite(speed) ||
+        speed < 0.0f || speed > 1.0f) {
+        return 3;
+    }
+
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_recall_preset(g_receiver, preset_number, speed) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_storePtzPreset(
+    JNIEnv*,
+    jobject,
+    jint preset_number
+) {
+    if (preset_number < 0 || preset_number > 99) return 3;
+
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_store_preset(g_receiver, preset_number) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_stopPtzMovement(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+
+    const bool pan_tilt_stopped = NDIlib_recv_ptz_pan_tilt_speed(g_receiver, 0.0f, 0.0f);
+    const bool zoom_stopped = NDIlib_recv_ptz_zoom_speed(g_receiver, 0.0f);
+    const bool focus_stopped = NDIlib_recv_ptz_focus_speed(g_receiver, 0.0f);
+    return pan_tilt_stopped && zoom_stopped && focus_stopped ? 0 : 2;
 }
 
 extern "C" JNIEXPORT void JNICALL

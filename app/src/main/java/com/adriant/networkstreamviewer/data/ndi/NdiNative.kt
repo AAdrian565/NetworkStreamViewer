@@ -17,6 +17,9 @@ internal object NdiNative {
         bandwidth: Int,
         listener: NdiPlaybackListener
     ): Boolean
+    external fun recallPtzPreset(presetNumber: Int, speed: Float): Int
+    external fun storePtzPreset(presetNumber: Int): Int
+    external fun stopPtzMovement(): Int
     external fun stopReceiver()
     external fun startSender(name: String): Boolean
     external fun sendVideoFrame(
@@ -33,4 +36,5 @@ internal object NdiNative {
 interface NdiPlaybackListener {
     fun onVideoAspectRatioChanged(aspectRatio: Float)
     fun onPlaybackStateChanged(state: Int)
+    fun onPtzSupportChanged(isSupported: Boolean)
 }

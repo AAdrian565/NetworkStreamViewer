@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +42,7 @@ fun SourceListScreen(
     onRefresh: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenCameraSender: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSourceSelected: (NdiSource) -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -51,7 +53,14 @@ fun SourceListScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("Network streams", style = MaterialTheme.typography.headlineMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Network streams", style = MaterialTheme.typography.headlineMedium)
+                TextButton(onClick = onOpenSettings) { Text("Settings") }
+            }
             Spacer(Modifier.height(8.dp))
             Text(status, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(12.dp))

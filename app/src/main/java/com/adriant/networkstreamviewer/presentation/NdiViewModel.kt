@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.adriant.networkstreamviewer.data.ndi.NdiSourceRepositoryImpl
+import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
+import com.adriant.networkstreamviewer.domain.model.AppTheme
+import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.repository.NdiSourceRepository
 import kotlinx.coroutines.CancellationException
@@ -20,7 +23,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
 class NdiViewModel(
-    private val repository: NdiSourceRepository
+    private val repository: NdiSourceRepository,
+    private val settingsRepository: AppSettingsRepository
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(NdiUiState())
     val uiState: StateFlow<NdiUiState> = mutableUiState.asStateFlow()
@@ -28,6 +32,14 @@ class NdiViewModel(
     private var discoveryJob: Job? = null
     private var detailsJob: Job? = null
     private var refreshGeneration = 0
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                mutableUiState.update { it.copy(settings = settings) }
+            }
+        }
+    }
 
     fun refreshSources() {
         discoveryJob?.cancel()
@@ -130,18 +142,50 @@ class NdiViewModel(
         mutableUiState.update { it.copy(isCameraSenderOpen = false) }
     }
 
+    fun openSettings() {
+        stopDiscovery()
+        mutableUiState.update {
+            it.copy(isSettingsOpen = true, isAboutOpen = false, selectedSource = null)
+        }
+    }
+
+    fun closeSettings() {
+        mutableUiState.update { it.copy(isSettingsOpen = false, isAboutOpen = false) }
+    }
+
+    fun openAbout() {
+        mutableUiState.update { it.copy(isAboutOpen = true) }
+    }
+
+    fun closeAbout() {
+        mutableUiState.update { it.copy(isAboutOpen = false) }
+    }
+
+    fun setTheme(theme: AppTheme) = settingsRepository.setTheme(theme)
+
+    fun setKeepScreenAwake(enabled: Boolean) = settingsRepository.setKeepScreenAwake(enabled)
+
+    fun setShowPlaybackDiagnostics(enabled: Boolean) =
+        settingsRepository.setShowPlaybackDiagnostics(enabled)
+
+    fun setDeveloperMode(enabled: Boolean) = settingsRepository.setDeveloperMode(enabled)
+
+    fun setDiscoveryRefreshInterval(interval: DiscoveryRefreshInterval) =
+        settingsRepository.setDiscoveryRefreshInterval(interval)
+
     override fun onCleared() {
         stopDiscovery()
         repository.shutdown()
     }
 
     class Factory(
+        private val settingsRepository: AppSettingsRepository,
         private val repository: NdiSourceRepository = NdiSourceRepositoryImpl()
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(NdiViewModel::class.java))
-            return NdiViewModel(repository) as T
+            return NdiViewModel(repository, settingsRepository) as T
         }
     }
 

@@ -5,16 +5,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adriant.networkstreamviewer.data.ndi.NdiPlayerController
 import com.adriant.networkstreamviewer.presentation.camera.CameraSenderScreen
 import com.adriant.networkstreamviewer.presentation.player.PlayerScreen
 import com.adriant.networkstreamviewer.presentation.sources.SourceListScreen
+import com.adriant.networkstreamviewer.presentation.settings.AboutScreen
+import com.adriant.networkstreamviewer.presentation.settings.SettingsScreen
+import kotlinx.coroutines.delay
 
 @Composable
 fun NdiApp(
-    viewModel: NdiViewModel = viewModel(factory = NdiViewModel.Factory())
+    settingsRepository: AppSettingsRepository,
+    viewModel: NdiViewModel = viewModel(factory = NdiViewModel.Factory(settingsRepository))
 ) {
     val permission = rememberLocalNetworkPermissionState()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -28,12 +33,61 @@ fun NdiApp(
         if (permission.isGranted) viewModel.refreshSources() else viewModel.stopDiscovery()
     }
 
+    LaunchedEffect(
+        permission.isGranted,
+        uiState.isSettingsOpen,
+        uiState.isCameraSenderOpen,
+        selectedSource,
+        uiState.settings.discoveryRefreshInterval
+    ) {
+        val intervalMillis = uiState.settings.discoveryRefreshInterval.intervalMillis
+        if (permission.isGranted &&
+            !uiState.isSettingsOpen &&
+            !uiState.isCameraSenderOpen &&
+            selectedSource == null &&
+            intervalMillis != null
+        ) {
+            while (true) {
+                delay(intervalMillis)
+                viewModel.refreshSources()
+            }
+        }
+    }
+
     selectedSource?.let { source ->
         BackHandler { viewModel.clearSelectedSource() }
         PlayerScreen(
             source = source,
             playerController = playerController,
+            keepScreenAwake = uiState.settings.keepScreenAwake,
+            showDiagnostics = uiState.settings.showPlaybackDiagnostics,
             onBack = viewModel::clearSelectedSource
+        )
+        return
+    }
+
+
+    if (uiState.isAboutOpen) {
+        BackHandler(onBack = viewModel::closeAbout)
+        AboutScreen(onBack = viewModel::closeAbout)
+        return
+    }
+
+    if (uiState.isSettingsOpen) {
+        val closeSettings = {
+            viewModel.closeSettings()
+            if (permission.isGranted) viewModel.refreshSources()
+        }
+        BackHandler(onBack = closeSettings)
+        SettingsScreen(
+            settings = uiState.settings,
+            onThemeChanged = viewModel::setTheme,
+            onKeepScreenAwakeChanged = viewModel::setKeepScreenAwake,
+            onShowPlaybackDiagnosticsChanged = viewModel::setShowPlaybackDiagnostics,
+            onDeveloperModeChanged = viewModel::setDeveloperMode,
+            onDiscoveryRefreshIntervalChanged = viewModel::setDiscoveryRefreshInterval,
+            onOpenAbout = viewModel::openAbout,
+            onBack = closeSettings
         )
         return
     }
@@ -53,7 +107,7 @@ fun NdiApp(
     }
 
     SourceListScreen(
-        sources = uiState.sources,
+        sources = uiState.displayedSources,
         status = if (permission.isGranted) {
             uiState.statusMessage
         } else {
@@ -64,6 +118,7 @@ fun NdiApp(
         onRefresh = viewModel::refreshSources,
         onRequestPermission = permission.request,
         onOpenCameraSender = viewModel::openCameraSender,
+        onOpenSettings = viewModel::openSettings,
         onSourceSelected = viewModel::selectSource
     )
 }

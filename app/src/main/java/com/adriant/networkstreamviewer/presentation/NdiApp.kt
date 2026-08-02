@@ -69,7 +69,11 @@ fun NdiApp(
 
     if (uiState.isAboutOpen) {
         BackHandler(onBack = viewModel::closeAbout)
-        AboutScreen(onBack = viewModel::closeAbout)
+        AboutScreen(
+            developerOptionsUnlocked = uiState.areDeveloperOptionsUnlocked,
+            onUnlockDeveloperOptions = viewModel::unlockDeveloperOptions,
+            onBack = viewModel::closeAbout
+        )
         return
     }
 
@@ -81,6 +85,7 @@ fun NdiApp(
         BackHandler(onBack = closeSettings)
         SettingsScreen(
             settings = uiState.settings,
+            developerOptionsUnlocked = uiState.areDeveloperOptionsUnlocked,
             onThemeChanged = viewModel::setTheme,
             onKeepScreenAwakeChanged = viewModel::setKeepScreenAwake,
             onShowPlaybackDiagnosticsChanged = viewModel::setShowPlaybackDiagnostics,

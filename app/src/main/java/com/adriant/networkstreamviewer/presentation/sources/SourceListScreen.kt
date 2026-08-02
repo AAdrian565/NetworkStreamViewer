@@ -1,5 +1,6 @@
 package com.adriant.networkstreamviewer.presentation.sources
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -24,14 +28,19 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.NdiStreamDetails
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
 import java.util.Locale
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun SourceListScreen(
@@ -45,7 +54,6 @@ fun SourceListScreen(
     onOpenSettings: () -> Unit,
     onSourceSelected: (NdiSource) -> Unit
 ) {
-    val uriHandler = LocalUriHandler.current
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -59,7 +67,12 @@ fun SourceListScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Network streams", style = MaterialTheme.typography.headlineMedium)
-                TextButton(onClick = onOpenSettings) { Text("Settings") }
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.semantics { contentDescription = "Settings" }
+                ) {
+                    SettingsIcon()
+                }
             }
             Spacer(Modifier.height(8.dp))
             Text(status, style = MaterialTheme.typography.bodyMedium)
@@ -82,22 +95,48 @@ fun SourceListScreen(
                     PermissionCard(onRequestPermission)
                 } else {
                     PullToRefreshBox(
-                        isRefreshing = isRefreshing,
-                        onRefresh = onRefresh,
+                        isRefreshing = false,
+                        onRefresh = { if (!isRefreshing) onRefresh() },
                         modifier = Modifier.fillMaxSize()
                     ) {
                         SourceList(
                             sources = sources,
-                            onRefresh = onRefresh,
                             onSourceSelected = onSourceSelected
                         )
                     }
                 }
             }
+        }
+    }
+}
 
-            TextButton(onClick = { uriHandler.openUri("https://ndi.video") }) {
-                Text("NDI® is a registered trademark of Vizrt NDI AB")
-            }
+@Composable
+private fun SettingsIcon() {
+    val color = LocalContentColor.current
+    Canvas(modifier = Modifier.size(24.dp)) {
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+        val strokeWidth = 2.dp.toPx()
+        val innerRadius = size.minDimension * 0.16f
+        val ringRadius = size.minDimension * 0.30f
+        val spokeStart = size.minDimension * 0.34f
+        val spokeEnd = size.minDimension * 0.46f
+
+        drawCircle(color = color, radius = innerRadius, center = center, style = Stroke(strokeWidth))
+        drawCircle(color = color, radius = ringRadius, center = center, style = Stroke(strokeWidth))
+        repeat(8) { index ->
+            val angle = index * PI.toFloat() / 4f
+            drawLine(
+                color = color,
+                start = androidx.compose.ui.geometry.Offset(
+                    center.x + cos(angle) * spokeStart,
+                    center.y + sin(angle) * spokeStart
+                ),
+                end = androidx.compose.ui.geometry.Offset(
+                    center.x + cos(angle) * spokeEnd,
+                    center.y + sin(angle) * spokeEnd
+                ),
+                strokeWidth = strokeWidth
+            )
         }
     }
 }
@@ -118,7 +157,6 @@ private fun PermissionCard(onRequestPermission: () -> Unit) {
 @Composable
 private fun SourceList(
     sources: List<NdiSource>,
-    onRefresh: () -> Unit,
     onSourceSelected: (NdiSource) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -134,8 +172,6 @@ private fun SourceList(
                     Text("No streams found", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
                     Text("Pull down to search again", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = onRefresh) { Text("Refresh") }
                 }
             }
         }

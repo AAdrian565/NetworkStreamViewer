@@ -8,22 +8,22 @@ This roadmap prioritizes improvements that make source discovery and playback mo
 - [x] Replace indefinite black screens with clear states: connecting, waiting for keyframe, disconnected, unsupported codec, decoder failure, and insufficient network bandwidth.
 - [x] Allow Highest, Preview/Low, and Automatic bandwidth selection.
 
+## Phase 2: NDI PTZ Camera Control
+
+- [x] Detect PTZ capability after the receiver connects and show controls only for supported sources.
+- [x] Support recalling and storing numbered camera presets, with confirmation before overwriting a preset.
+- [x] Report rejected or unavailable PTZ commands without interrupting video playback.
+- [x] Add native and device tests for capability changes, command ranges, stop commands, presets, and receiver cleanup.
+- [ ] Add press-and-hold pan and tilt controls with adjustable movement speed and immediate stop on release, navigation, or surface loss.
+- [ ] Add zoom-in and zoom-out controls with safe speed limits and immediate stop behavior.
+- [ ] Add autofocus and manual focus controls, followed by optional exposure and white-balance controls where supported.
+
 ## Phase 3: Monitoring and Audio
 
 - [ ] Add synchronized NDI audio playback through Android `AudioTrack`.
 - [ ] Provide mute and volume controls in the floating playback interface.
 - [ ] Add an optional stream-information overlay showing resolution, frame rate, Full NDI/HX codec, bitrate, dropped frames, latency, and connection status.
 - [ ] Record useful playback diagnostics for troubleshooting without exposing private network information.
-
-## Phase 2: NDI PTZ Camera Control
-
-- [ ] Detect PTZ capability after the receiver connects and show controls only for supported sources.
-- [ ] Support recalling and storing numbered camera presets, with confirmation before overwriting a preset.
-- [ ] Add press-and-hold pan and tilt controls with adjustable movement speed and immediate stop on release, navigation, or surface loss.
-- [ ] Add zoom-in and zoom-out controls with safe speed limits and immediate stop behavior.
-- [ ] Add autofocus and manual focus controls, followed by optional exposure and white-balance controls where supported.
-- [ ] Report rejected or unavailable PTZ commands without interrupting video playback.
-- [ ] Add native and device tests for capability changes, command ranges, stop commands, presets, and receiver cleanup.
 
 ## Phase 4: Android Viewing Experience
 

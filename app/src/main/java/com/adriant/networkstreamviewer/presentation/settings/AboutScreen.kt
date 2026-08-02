@@ -1,6 +1,7 @@
 package com.adriant.networkstreamviewer.presentation.settings
 
 import android.content.pm.PackageManager
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +14,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(
+    developerOptionsUnlocked: Boolean,
+    onUnlockDeveloperOptions: () -> Unit,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val version = remember(context) {
@@ -29,6 +37,7 @@ fun AboutScreen(onBack: () -> Unit) {
             "Unknown"
         }
     }
+    var versionTapCount by remember { mutableIntStateOf(0) }
 
     Scaffold { innerPadding ->
         Column(
@@ -41,7 +50,18 @@ fun AboutScreen(onBack: () -> Unit) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Text("Network Stream Viewer", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.padding(4.dp))
-                Text("Version $version", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = "Version $version",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable {
+                        if (!developerOptionsUnlocked) {
+                            versionTapCount++
+                            if (versionTapCount >= DEVELOPER_UNLOCK_TAPS) {
+                                onUnlockDeveloperOptions()
+                            }
+                        }
+                    }
+                )
                 Spacer(Modifier.padding(12.dp))
                 Text("NDI® attribution", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.padding(4.dp))
@@ -67,3 +87,5 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 }
+
+private const val DEVELOPER_UNLOCK_TAPS = 7

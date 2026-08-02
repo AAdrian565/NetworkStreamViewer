@@ -170,6 +170,10 @@ class NdiViewModel(
 
     fun setDeveloperMode(enabled: Boolean) = settingsRepository.setDeveloperMode(enabled)
 
+    fun unlockDeveloperOptions() {
+        mutableUiState.update { it.copy(areDeveloperOptionsUnlocked = true) }
+    }
+
     fun setDiscoveryRefreshInterval(interval: DiscoveryRefreshInterval) =
         settingsRepository.setDiscoveryRefreshInterval(interval)
 

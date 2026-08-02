@@ -33,6 +33,7 @@ import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
+    developerOptionsUnlocked: Boolean,
     onThemeChanged: (AppTheme) -> Unit,
     onKeepScreenAwakeChanged: (Boolean) -> Unit,
     onShowPlaybackDiagnosticsChanged: (Boolean) -> Unit,
@@ -79,14 +80,16 @@ fun SettingsScreen(
                 summary = settings.discoveryRefreshInterval.label,
                 onClick = { refreshDialogOpen = true }
             )
-            HorizontalDivider()
-            SettingsSection("Developer")
-            SwitchSetting(
-                title = "Developer mode",
-                summary = "Add a simulated empty stream that exposes player and PTZ UI.",
-                checked = settings.developerMode,
-                onCheckedChange = onDeveloperModeChanged
-            )
+            if (developerOptionsUnlocked) {
+                HorizontalDivider()
+                SettingsSection("Developer")
+                SwitchSetting(
+                    title = "Developer mode",
+                    summary = "Add a simulated empty stream that exposes player and PTZ UI.",
+                    checked = settings.developerMode,
+                    onCheckedChange = onDeveloperModeChanged
+                )
+            }
             HorizontalDivider()
             ValueSetting(
                 title = "About",

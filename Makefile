@@ -7,6 +7,7 @@ ADB ?= $(ANDROID_SDK)/platform-tools/adb
 IMAGE_MAGICK ?= convert
 
 DEBUG_APK := app/build/outputs/apk/debug/app-debug.apk
+APP_COMPONENT := com.adriant.networkstreamviewer/.MainActivity
 RELEASE_DIR := app/build/outputs/apk/release
 ICON_ARTWORK := app/src/main/res/drawable-nodpi/ic_launcher_artwork.png
 
@@ -14,7 +15,7 @@ ICON_ARTWORK := app/src/main/res/drawable-nodpi/ic_launcher_artwork.png
 
 help:
 	@printf '%s\n' \
-		'make install                 Build and install the debug APK through ADB' \
+		'make install                 Build, install, and open the debug app through ADB' \
 		'make devices                 List connected devices and their serials' \
 		'make release                 Build the release APK' \
 		'make debug                   Build the debug APK only' \
@@ -63,8 +64,9 @@ install:
 			exit 1 ;; \
 	esac; \
 	printf 'Installing to ADB device: %s\n' "$$serial"; \
-	$(MAKE) --no-print-directory debug; \
-	'$(ADB)' -s "$$serial" install -r '$(DEBUG_APK)'
+	$(MAKE) --no-print-directory debug && \
+	'$(ADB)' -s "$$serial" install -r '$(DEBUG_APK)' && \
+	'$(ADB)' -s "$$serial" shell am start -n '$(APP_COMPONENT)'
 
 release:
 	$(GRADLEW) assembleRelease

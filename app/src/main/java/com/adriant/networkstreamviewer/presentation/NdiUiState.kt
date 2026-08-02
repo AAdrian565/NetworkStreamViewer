@@ -13,6 +13,7 @@ data class NdiUiState(
     val isCameraSenderOpen: Boolean = false,
     val isSettingsOpen: Boolean = false,
     val isAboutOpen: Boolean = false,
+    val areDeveloperOptionsUnlocked: Boolean = false,
     val settings: AppSettings = AppSettings(),
     val errorMessage: String? = null
 ) {

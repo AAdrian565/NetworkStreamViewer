@@ -7,5 +7,5 @@ interface NdiSourceRepository {
     suspend fun initialize(): Boolean
     suspend fun discoverSources(timeoutMs: Int): List<NdiSource>
     suspend fun probeSource(source: NdiSource): NdiStreamDetails?
-    fun shutdown()
+    suspend fun shutdown()
 }

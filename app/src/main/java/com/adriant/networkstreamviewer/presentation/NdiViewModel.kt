@@ -10,9 +10,13 @@ import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.repository.NdiSourceRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +36,7 @@ class NdiViewModel(
     private var discoveryJob: Job? = null
     private var detailsJob: Job? = null
     private var refreshGeneration = 0
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         viewModelScope.launch {
@@ -179,7 +184,12 @@ class NdiViewModel(
 
     override fun onCleared() {
         stopDiscovery()
-        repository.shutdown()
+        cleanupScope.launch {
+            repository.shutdown()
+        }.invokeOnCompletion {
+            cleanupScope.cancel()
+        }
+        super.onCleared()
     }
 
     class Factory(

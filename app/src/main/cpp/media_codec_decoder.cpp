@@ -52,8 +52,10 @@ DecodeResult MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     const uint64_t payload_size = static_cast<uint64_t>(packet->data_size);
     const uint64_t extra_size = static_cast<uint64_t>(packet->extra_data_size);
     const uint64_t available_size = static_cast<uint64_t>(packet_size - packet->version);
-    if (payload_size + extra_size > available_size ||
-        payload_size > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+    if (extra_size > available_size ||
+        payload_size > available_size - extra_size ||
+        payload_size > static_cast<uint64_t>(std::numeric_limits<size_t>::max()) ||
+        extra_size > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
         log_error("NDI HX frame packet sizes are invalid");
         return DecodeResult::DecoderFailure;
     }

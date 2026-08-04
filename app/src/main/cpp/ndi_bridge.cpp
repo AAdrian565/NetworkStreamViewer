@@ -228,7 +228,20 @@ void receive_loop(
             100
         );
 
-        if (type == NDIlib_frame_type_video && video.xres > 0 && video.yres > 0) {
+        if (type == NDIlib_frame_type_video) {
+            if (video.xres <= 0 || video.yres <= 0) {
+                NDIlib_recv_free_video_v2(receiver, &video);
+                log_error("NDI returned a video frame with invalid dimensions");
+                notify_playback_state(
+                    env,
+                    aspect_ratio_listener,
+                    playback_state_method,
+                    5,
+                    last_playback_state
+                );
+                break;
+            }
+
             bool terminal_playback_error = false;
             last_video_time = std::chrono::steady_clock::now();
             const float aspect_ratio = video.picture_aspect_ratio > 0.0f

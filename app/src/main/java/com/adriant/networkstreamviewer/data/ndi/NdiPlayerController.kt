@@ -5,36 +5,71 @@ import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class NdiPlayerController {
+    private val lifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lifecycleMutex = Mutex()
+    private val operationGeneration = AtomicLong(0L)
+
     fun start(
         source: NdiSource,
         surface: Surface,
         bandwidth: NdiBandwidth,
         onAspectRatioChanged: (Float) -> Unit,
         onPlaybackStateChanged: (NdiPlaybackState) -> Unit,
-        onPtzSupportChanged: (Boolean) -> Unit
-    ): Boolean = NdiNative.startReceiver(
-        source.name,
-        source.url,
-        surface,
-        bandwidth.toNativeValue(),
-        object : NdiPlaybackListener {
-            override fun onVideoAspectRatioChanged(aspectRatio: Float) {
-                onAspectRatioChanged(aspectRatio)
-            }
+        onPtzSupportChanged: (Boolean) -> Unit,
+        onStartFailed: () -> Unit
+    ) {
+        val operation = operationGeneration.incrementAndGet()
+        lifecycleScope.launch {
+            lifecycleMutex.withLock {
+                if (operation != operationGeneration.get()) return@withLock
 
-            override fun onPlaybackStateChanged(state: Int) {
-                onPlaybackStateChanged(state.toPlaybackState())
-            }
+                val started = try {
+                    NdiNative.startReceiver(
+                        source.name,
+                        source.url,
+                        surface,
+                        bandwidth.toNativeValue(),
+                        object : NdiPlaybackListener {
+                            override fun onVideoAspectRatioChanged(aspectRatio: Float) {
+                                if (operation == operationGeneration.get()) {
+                                    onAspectRatioChanged(aspectRatio)
+                                }
+                            }
 
-            override fun onPtzSupportChanged(isSupported: Boolean) {
-                onPtzSupportChanged(isSupported)
+                            override fun onPlaybackStateChanged(state: Int) {
+                                if (operation == operationGeneration.get()) {
+                                    onPlaybackStateChanged(state.toPlaybackState())
+                                }
+                            }
+
+                            override fun onPtzSupportChanged(isSupported: Boolean) {
+                                if (operation == operationGeneration.get()) {
+                                    onPtzSupportChanged(isSupported)
+                                }
+                            }
+                        }
+                    )
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (!started && operation == operationGeneration.get()) {
+                    onStartFailed()
+                }
             }
         }
-    )
+    }
 
     suspend fun recallPtzPreset(
         presetNumber: Int,
@@ -52,10 +87,28 @@ class NdiPlayerController {
                 return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
             }
             NdiNative.storePtzPreset(presetNumber).toPtzCommandResult()
-        }
+    }
 
     fun stop() {
-        NdiNative.stopReceiver()
+        val operation = operationGeneration.incrementAndGet()
+        lifecycleScope.launch {
+            lifecycleMutex.withLock {
+                if (operation != operationGeneration.get()) return@withLock
+                NdiNative.stopReceiver()
+            }
+        }
+    }
+
+    fun close() {
+        val operation = operationGeneration.incrementAndGet()
+        lifecycleScope.launch {
+            lifecycleMutex.withLock {
+                if (operation != operationGeneration.get()) return@withLock
+                NdiNative.stopReceiver()
+            }
+        }.invokeOnCompletion {
+            lifecycleScope.cancel()
+        }
     }
 
     private companion object {

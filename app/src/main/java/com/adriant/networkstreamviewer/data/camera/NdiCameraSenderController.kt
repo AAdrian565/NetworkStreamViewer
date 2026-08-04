@@ -220,8 +220,8 @@ class NdiCameraSenderController(
 
         try {
             if (!streaming) return
-            val nv12 = nv12Converter.convert(image)
-            if (!NdiNative.sendVideoFrame(nv12, image.width, image.height, activeFrameRate)) {
+            val frame = nv12Converter.convert(image)
+            if (!NdiNative.sendVideoFrame(frame.data, frame.width, frame.height, activeFrameRate)) {
                 streaming = false
                 NdiNative.stopSender()
                 mainHandler.post(onStreamingStopped)

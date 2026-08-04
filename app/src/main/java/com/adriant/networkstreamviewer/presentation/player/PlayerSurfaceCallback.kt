@@ -17,16 +17,15 @@ internal fun playerSurfaceCallback(
     override fun surfaceCreated(holder: SurfaceHolder) {
         onPlaybackStateChanged(NdiPlaybackState.CONNECTING)
         onPtzSupportChanged(false)
-        if (!playerController.start(
-                source = source,
-                surface = holder.surface,
-                bandwidth = bandwidth,
-                onAspectRatioChanged = onAspectRatioChanged,
-                onPlaybackStateChanged = onPlaybackStateChanged,
-                onPtzSupportChanged = onPtzSupportChanged
-            )) {
-            onPlaybackStateChanged(NdiPlaybackState.DECODER_FAILURE)
-        }
+        playerController.start(
+            source = source,
+            surface = holder.surface,
+            bandwidth = bandwidth,
+            onAspectRatioChanged = onAspectRatioChanged,
+            onPlaybackStateChanged = onPlaybackStateChanged,
+            onPtzSupportChanged = onPtzSupportChanged,
+            onStartFailed = { onPlaybackStateChanged(NdiPlaybackState.DECODER_FAILURE) }
+        )
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit

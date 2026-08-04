@@ -22,7 +22,7 @@ class NdiSourceRepositoryImpl : NdiSourceRepository {
             NdiNative.probeSource(source.name, source.url, PROBE_TIMEOUT_MS).toStreamDetails()
         }
 
-    override fun shutdown() {
+    override suspend fun shutdown() = withContext(Dispatchers.IO) {
         NdiNative.shutdown()
     }
 }

@@ -2,6 +2,7 @@ package com.adriant.networkstreamviewer.presentation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,6 +26,10 @@ fun NdiApp(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerController = remember { NdiPlayerController() }
     val selectedSource = uiState.selectedSource
+
+    DisposableEffect(playerController) {
+        onDispose { playerController.close() }
+    }
 
     LocalNetworkMulticastEffect(enabled = permission.isGranted)
     ScreenOrientationEffect(showingPlayer = selectedSource != null)

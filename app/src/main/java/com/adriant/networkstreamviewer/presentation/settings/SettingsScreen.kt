@@ -29,12 +29,14 @@ import androidx.compose.ui.unit.dp
 import com.adriant.networkstreamviewer.domain.model.AppSettings
 import com.adriant.networkstreamviewer.domain.model.AppTheme
 import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
+import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
     developerOptionsUnlocked: Boolean,
     onThemeChanged: (AppTheme) -> Unit,
+    onDefaultBandwidthChanged: (NdiBandwidth) -> Unit,
     onKeepScreenAwakeChanged: (Boolean) -> Unit,
     onShowPlaybackDiagnosticsChanged: (Boolean) -> Unit,
     onDeveloperModeChanged: (Boolean) -> Unit,
@@ -43,6 +45,7 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     var themeDialogOpen by remember { mutableStateOf(false) }
+    var bandwidthDialogOpen by remember { mutableStateOf(false) }
     var refreshDialogOpen by remember { mutableStateOf(false) }
 
     Scaffold { innerPadding ->
@@ -61,6 +64,11 @@ fun SettingsScreen(
             )
             HorizontalDivider()
             SettingsSection("Playback")
+            ValueSetting(
+                title = "Default quality",
+                summary = settings.defaultBandwidth.qualityLabel,
+                onClick = { bandwidthDialogOpen = true }
+            )
             SwitchSetting(
                 title = "Keep screen awake",
                 summary = "Prevent the display from sleeping during playback.",
@@ -113,6 +121,19 @@ fun SettingsScreen(
             onDismiss = { themeDialogOpen = false }
         )
     }
+    if (bandwidthDialogOpen) {
+        ChoiceDialog(
+            title = "Default quality",
+            choices = NdiBandwidth.entries,
+            selected = settings.defaultBandwidth,
+            label = NdiBandwidth::qualityLabel,
+            onSelected = {
+                onDefaultBandwidthChanged(it)
+                bandwidthDialogOpen = false
+            },
+            onDismiss = { bandwidthDialogOpen = false }
+        )
+    }
     if (refreshDialogOpen) {
         ChoiceDialog(
             title = "Discovery refresh interval",
@@ -127,6 +148,13 @@ fun SettingsScreen(
         )
     }
 }
+
+private val NdiBandwidth.qualityLabel: String
+    get() = when (this) {
+        NdiBandwidth.AUTOMATIC -> "Automatic"
+        NdiBandwidth.HIGHEST -> "Highest"
+        NdiBandwidth.LOWEST -> "Preview / Low"
+    }
 
 @Composable
 internal fun SettingsHeader(title: String, onBack: () -> Unit) {
@@ -207,7 +235,7 @@ private fun <T> ChoiceDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelected(choice) }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(

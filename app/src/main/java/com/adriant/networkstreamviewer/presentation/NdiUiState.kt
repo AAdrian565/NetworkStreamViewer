@@ -14,6 +14,7 @@ data class NdiUiState(
     val isSettingsOpen: Boolean = false,
     val isAboutOpen: Boolean = false,
     val areDeveloperOptionsUnlocked: Boolean = false,
+    val update: UpdateUiState = UpdateUiState(),
     val settings: AppSettings = AppSettings(),
     val errorMessage: String? = null
 ) {

@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
+import com.adriant.networkstreamviewer.domain.repository.UpdateRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adriant.networkstreamviewer.data.ndi.NdiPlayerController
@@ -20,7 +21,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun NdiApp(
     settingsRepository: AppSettingsRepository,
-    viewModel: NdiViewModel = viewModel(factory = NdiViewModel.Factory(settingsRepository))
+    updateRepository: UpdateRepository,
+    viewModel: NdiViewModel = viewModel(
+        factory = NdiViewModel.Factory(settingsRepository, updateRepository)
+    )
 ) {
     val permission = rememberLocalNetworkPermissionState()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +68,7 @@ fun NdiApp(
         PlayerScreen(
             source = source,
             playerController = playerController,
+            defaultBandwidth = uiState.settings.defaultBandwidth,
             keepScreenAwake = uiState.settings.keepScreenAwake,
             showDiagnostics = uiState.settings.showPlaybackDiagnostics,
             onBack = viewModel::clearSelectedSource
@@ -76,7 +81,10 @@ fun NdiApp(
         BackHandler(onBack = viewModel::closeAbout)
         AboutScreen(
             developerOptionsUnlocked = uiState.areDeveloperOptionsUnlocked,
+            updateState = uiState.update,
             onUnlockDeveloperOptions = viewModel::unlockDeveloperOptions,
+            onCheckForUpdates = viewModel::checkForUpdates,
+            onDownloadUpdate = viewModel::downloadUpdate,
             onBack = viewModel::closeAbout
         )
         return
@@ -92,6 +100,7 @@ fun NdiApp(
             settings = uiState.settings,
             developerOptionsUnlocked = uiState.areDeveloperOptionsUnlocked,
             onThemeChanged = viewModel::setTheme,
+            onDefaultBandwidthChanged = viewModel::setDefaultBandwidth,
             onKeepScreenAwakeChanged = viewModel::setKeepScreenAwake,
             onShowPlaybackDiagnosticsChanged = viewModel::setShowPlaybackDiagnostics,
             onDeveloperModeChanged = viewModel::setDeveloperMode,

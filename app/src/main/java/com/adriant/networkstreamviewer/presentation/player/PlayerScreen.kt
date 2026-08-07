@@ -45,6 +45,7 @@ private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
 fun PlayerScreen(
     source: NdiSource,
     playerController: NdiPlayerController,
+    defaultBandwidth: NdiBandwidth,
     keepScreenAwake: Boolean,
     showDiagnostics: Boolean,
     onBack: () -> Unit
@@ -55,7 +56,7 @@ fun PlayerScreen(
     var videoAspectRatio by remember(source) {
         mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO)
     }
-    var bandwidth by remember(source) { mutableStateOf(NdiBandwidth.AUTOMATIC) }
+    var bandwidth by remember(source) { mutableStateOf(defaultBandwidth) }
     var automaticFallbackToLow by remember(source, bandwidth) { mutableStateOf(false) }
     var playbackState by remember(source, bandwidth) {
         mutableStateOf(

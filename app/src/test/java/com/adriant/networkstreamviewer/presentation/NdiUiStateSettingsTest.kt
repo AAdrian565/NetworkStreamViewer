@@ -3,6 +3,7 @@ package com.adriant.networkstreamviewer.presentation
 import com.adriant.networkstreamviewer.domain.model.AppSettings
 import com.adriant.networkstreamviewer.domain.model.DEVELOPER_SOURCE_URL
 import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
+import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,6 +21,11 @@ class NdiUiStateSettingsTest {
         assertEquals(1, state.displayedSources.size)
         assertEquals(DEVELOPER_SOURCE_URL, state.displayedSources.single().url)
         assertEquals("1 source found", state.statusMessage)
+    }
+
+    @Test
+    fun `automatic quality is the default playback quality`() {
+        assertEquals(NdiBandwidth.AUTOMATIC, AppSettings().defaultBandwidth)
     }
 
     @Test

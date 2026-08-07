@@ -2,13 +2,16 @@ package com.adriant.networkstreamviewer.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.adriant.networkstreamviewer.BuildConfig
 import androidx.lifecycle.viewModelScope
 import com.adriant.networkstreamviewer.data.ndi.NdiSourceRepositoryImpl
 import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
 import com.adriant.networkstreamviewer.domain.model.AppTheme
 import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
+import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.repository.NdiSourceRepository
+import com.adriant.networkstreamviewer.domain.repository.UpdateRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,13 +31,15 @@ import kotlinx.coroutines.sync.withPermit
 
 class NdiViewModel(
     private val repository: NdiSourceRepository,
-    private val settingsRepository: AppSettingsRepository
+    private val settingsRepository: AppSettingsRepository,
+    private val updateRepository: UpdateRepository
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(NdiUiState())
     val uiState: StateFlow<NdiUiState> = mutableUiState.asStateFlow()
 
     private var discoveryJob: Job? = null
     private var detailsJob: Job? = null
+    private var updateJob: Job? = null
     private var refreshGeneration = 0
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -166,7 +171,78 @@ class NdiViewModel(
         mutableUiState.update { it.copy(isAboutOpen = false) }
     }
 
+    fun checkForUpdates() {
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(update = UpdateUiState(status = UpdateStatus.CHECKING))
+            }
+            try {
+                val update = updateRepository.findLatestUpdate(BuildConfig.VERSION_NAME)
+                mutableUiState.update {
+                    it.copy(
+                        update = UpdateUiState(
+                            status = if (update == null) {
+                                UpdateStatus.UP_TO_DATE
+                            } else {
+                                UpdateStatus.AVAILABLE
+                            },
+                            update = update
+                        )
+                    )
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        update = UpdateUiState(
+                            status = UpdateStatus.ERROR,
+                            errorMessage = "Could not check for updates."
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun downloadUpdate() {
+        val update = mutableUiState.value.update.update ?: return
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            mutableUiState.update {
+                it.copy(update = it.update.copy(status = UpdateStatus.DOWNLOADING, errorMessage = null))
+            }
+            try {
+                val path = updateRepository.downloadUpdate(update)
+                mutableUiState.update {
+                    it.copy(
+                        update = it.update.copy(
+                            status = UpdateStatus.READY,
+                            downloadedApkPath = path,
+                            errorMessage = null
+                        )
+                    )
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableUiState.update {
+                    it.copy(
+                        update = it.update.copy(
+                            status = UpdateStatus.AVAILABLE,
+                            errorMessage = "Could not download the update."
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     fun setTheme(theme: AppTheme) = settingsRepository.setTheme(theme)
+
+    fun setDefaultBandwidth(bandwidth: NdiBandwidth) =
+        settingsRepository.setDefaultBandwidth(bandwidth)
 
     fun setKeepScreenAwake(enabled: Boolean) = settingsRepository.setKeepScreenAwake(enabled)
 
@@ -194,12 +270,13 @@ class NdiViewModel(
 
     class Factory(
         private val settingsRepository: AppSettingsRepository,
+        private val updateRepository: UpdateRepository,
         private val repository: NdiSourceRepository = NdiSourceRepositoryImpl()
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(NdiViewModel::class.java))
-            return NdiViewModel(repository, settingsRepository) as T
+            return NdiViewModel(repository, settingsRepository, updateRepository) as T
         }
     }
 

@@ -364,11 +364,10 @@ void stop_receiver_locked(JNIEnv* env) {
     if (g_receive_thread.joinable()) g_receive_thread.join();
 
     if (g_receiver != nullptr) {
-        if (NDIlib_recv_ptz_is_supported(g_receiver)) {
-            NDIlib_recv_ptz_pan_tilt_speed(g_receiver, 0.0f, 0.0f);
-            NDIlib_recv_ptz_zoom_speed(g_receiver, 0.0f);
-            NDIlib_recv_ptz_focus_speed(g_receiver, 0.0f);
-        }
+        // Stop unconditionally: capability can disappear before surface destruction.
+        NDIlib_recv_ptz_pan_tilt_speed(g_receiver, 0.0f, 0.0f);
+        NDIlib_recv_ptz_zoom_speed(g_receiver, 0.0f);
+        NDIlib_recv_ptz_focus_speed(g_receiver, 0.0f);
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
     }
@@ -650,6 +649,107 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_storePtzPreset(
     std::shared_lock lock(g_lifecycle_mutex);
     if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
     return NDIlib_recv_ptz_store_preset(g_receiver, preset_number) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_panTiltSpeed(
+    JNIEnv*,
+    jobject,
+    jfloat pan_speed,
+    jfloat tilt_speed
+) {
+    if (!std::isfinite(pan_speed) || !std::isfinite(tilt_speed) ||
+        pan_speed < -1.0f || pan_speed > 1.0f || tilt_speed < -1.0f || tilt_speed > 1.0f) {
+        return 3;
+    }
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_pan_tilt_speed(g_receiver, pan_speed, tilt_speed) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_zoomSpeed(
+    JNIEnv*,
+    jobject,
+    jfloat zoom_speed
+) {
+    if (!std::isfinite(zoom_speed) || zoom_speed < -0.5f || zoom_speed > 0.5f) return 3;
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_zoom_speed(g_receiver, zoom_speed) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_focusSpeed(
+    JNIEnv*,
+    jobject,
+    jfloat focus_speed
+) {
+    if (!std::isfinite(focus_speed) || focus_speed < -0.5f || focus_speed > 0.5f) return 3;
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_focus_speed(g_receiver, focus_speed) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_focus(
+    JNIEnv*,
+    jobject,
+    jfloat focus_value
+) {
+    if (!std::isfinite(focus_value) || focus_value < 0.0f || focus_value > 1.0f) return 3;
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_focus(g_receiver, focus_value) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_autoFocus(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_auto_focus(g_receiver) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_whiteBalanceAuto(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_white_balance_auto(g_receiver) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_whiteBalanceIndoor(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_white_balance_indoor(g_receiver) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_whiteBalanceOutdoor(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_white_balance_outdoor(g_receiver) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_whiteBalanceOneShot(JNIEnv*, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_white_balance_oneshot(g_receiver) ? 0 : 2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_whiteBalanceManual(
+    JNIEnv*,
+    jobject,
+    jfloat red,
+    jfloat blue
+) {
+    if (!std::isfinite(red) || !std::isfinite(blue) || red < 0.0f || red > 1.0f ||
+        blue < 0.0f || blue > 1.0f) return 3;
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_receiver == nullptr || !NDIlib_recv_ptz_is_supported(g_receiver)) return 1;
+    return NDIlib_recv_ptz_white_balance_manual(g_receiver, red, blue) ? 0 : 2;
 }
 
 extern "C" JNIEXPORT jint JNICALL

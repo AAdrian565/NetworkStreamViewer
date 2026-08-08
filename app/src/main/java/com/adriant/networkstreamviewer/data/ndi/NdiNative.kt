@@ -19,6 +19,16 @@ internal object NdiNative {
     ): Boolean
     external fun recallPtzPreset(presetNumber: Int, speed: Float): Int
     external fun storePtzPreset(presetNumber: Int): Int
+    external fun panTiltSpeed(panSpeed: Float, tiltSpeed: Float): Int
+    external fun zoomSpeed(zoomSpeed: Float): Int
+    external fun focusSpeed(focusSpeed: Float): Int
+    external fun focus(focusValue: Float): Int
+    external fun autoFocus(): Int
+    external fun whiteBalanceAuto(): Int
+    external fun whiteBalanceIndoor(): Int
+    external fun whiteBalanceOutdoor(): Int
+    external fun whiteBalanceOneShot(): Int
+    external fun whiteBalanceManual(red: Float, blue: Float): Int
     external fun stopPtzMovement(): Int
     external fun stopReceiver()
     external fun startSender(name: String): Boolean

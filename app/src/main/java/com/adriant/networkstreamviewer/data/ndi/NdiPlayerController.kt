@@ -89,6 +89,70 @@ class NdiPlayerController {
             NdiNative.storePtzPreset(presetNumber).toPtzCommandResult()
     }
 
+    suspend fun panTiltSpeed(panSpeed: Float, tiltSpeed: Float): NdiPtzCommandResult =
+        withContext(Dispatchers.IO) {
+            if (!isValidPtzMovementSpeed(panSpeed) || !isValidPtzMovementSpeed(tiltSpeed)) {
+                return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
+            }
+            NdiNative.panTiltSpeed(panSpeed, tiltSpeed).toPtzCommandResult()
+        }
+
+    suspend fun zoomSpeed(speed: Float): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        if (!isValidPtzMovementSpeed(speed) || kotlin.math.abs(speed) > MAX_ZOOM_SPEED) {
+            return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
+        }
+        NdiNative.zoomSpeed(speed).toPtzCommandResult()
+    }
+
+    suspend fun focusSpeed(speed: Float): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        if (!isValidPtzMovementSpeed(speed) || kotlin.math.abs(speed) > MAX_FOCUS_SPEED) {
+            return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
+        }
+        NdiNative.focusSpeed(speed).toPtzCommandResult()
+    }
+
+    suspend fun focus(value: Float): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        if (!isValidPtzAbsoluteValue(value)) {
+            return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
+        }
+        NdiNative.focus(value).toPtzCommandResult()
+    }
+
+    suspend fun autoFocus(): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        NdiNative.autoFocus().toPtzCommandResult()
+    }
+
+    suspend fun whiteBalanceAuto(): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        NdiNative.whiteBalanceAuto().toPtzCommandResult()
+    }
+
+    suspend fun whiteBalanceIndoor(): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        NdiNative.whiteBalanceIndoor().toPtzCommandResult()
+    }
+
+    suspend fun whiteBalanceOutdoor(): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        NdiNative.whiteBalanceOutdoor().toPtzCommandResult()
+    }
+
+    suspend fun whiteBalanceOneShot(): NdiPtzCommandResult = withContext(Dispatchers.IO) {
+        NdiNative.whiteBalanceOneShot().toPtzCommandResult()
+    }
+
+    suspend fun whiteBalanceManual(red: Float, blue: Float): NdiPtzCommandResult =
+        withContext(Dispatchers.IO) {
+            if (!isValidPtzAbsoluteValue(red) || !isValidPtzAbsoluteValue(blue)) {
+                return@withContext NdiPtzCommandResult.INVALID_ARGUMENT
+            }
+            NdiNative.whiteBalanceManual(red, blue).toPtzCommandResult()
+        }
+
+    /** Sends a stop even when the composable scope is being cancelled. */
+    fun stopPtzMovement() {
+        lifecycleScope.launch {
+            NdiNative.stopPtzMovement()
+        }
+    }
+
     fun stop() {
         val operation = operationGeneration.incrementAndGet()
         lifecycleScope.launch {
@@ -113,12 +177,19 @@ class NdiPlayerController {
 
     private companion object {
         const val MAX_PRESET_SPEED = 1.0f
+        const val MAX_ZOOM_SPEED = 0.5f
+        const val MAX_FOCUS_SPEED = 0.5f
     }
 }
 
 internal fun isValidPtzPreset(presetNumber: Int): Boolean = presetNumber in 0..99
 
 internal fun isValidPtzSpeed(speed: Float): Boolean = speed.isFinite() && speed in 0.0f..1.0f
+
+internal fun isValidPtzMovementSpeed(speed: Float): Boolean =
+    speed.isFinite() && speed in -1.0f..1.0f
+
+internal fun isValidPtzAbsoluteValue(value: Float): Boolean = value.isFinite() && value in 0.0f..1.0f
 
 internal fun Int.toPtzCommandResult(): NdiPtzCommandResult = when (this) {
     0 -> NdiPtzCommandResult.ACCEPTED

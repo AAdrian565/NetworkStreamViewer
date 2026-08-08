@@ -14,9 +14,9 @@ This roadmap prioritizes improvements that make source discovery and playback mo
 - [x] Support recalling and storing numbered camera presets, with confirmation before overwriting a preset.
 - [x] Report rejected or unavailable PTZ commands without interrupting video playback.
 - [x] Add native and device tests for capability changes, command ranges, stop commands, presets, and receiver cleanup.
-- [ ] Add press-and-hold pan and tilt controls with adjustable movement speed and immediate stop on release, navigation, or surface loss.
-- [ ] Add zoom-in and zoom-out controls with safe speed limits and immediate stop behavior.
-- [ ] Add autofocus and manual focus controls, followed by optional exposure and white-balance controls where supported.
+- [x] Add press-and-hold pan and tilt controls with adjustable movement speed and immediate stop on release, navigation, or surface loss.
+- [x] Add zoom-in and zoom-out controls with safe speed limits and immediate stop behavior.
+- [x] Add autofocus and manual focus controls.
 
 ## Phase 3: Monitoring and Audio
 

@@ -54,6 +54,7 @@ class PtzPresetControlsInstrumentedTest {
 
         composeRule.onNodeWithContentDescription("Save preset mode").performClick()
         composeRule.onNodeWithContentDescription("Save preset 7").performClick()
+        composeRule.onNodeWithContentDescription("Confirm overwrite preset 7").performClick()
         composeRule.runOnIdle { assertEquals(7, storedPreset) }
 
         composeRule.onNodeWithContentDescription("Call preset 8").performClick()

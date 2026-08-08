@@ -42,6 +42,19 @@ class NdiPlayerMappingTest {
     }
 
     @Test
+    fun validatesMovementAndAbsolutePtzRanges() {
+        assertEquals(true, isValidPtzMovementSpeed(-1.0f))
+        assertEquals(true, isValidPtzMovementSpeed(1.0f))
+        assertEquals(false, isValidPtzMovementSpeed(1.01f))
+        assertEquals(false, isValidPtzMovementSpeed(Float.NaN))
+
+        assertEquals(true, isValidPtzAbsoluteValue(0.0f))
+        assertEquals(true, isValidPtzAbsoluteValue(1.0f))
+        assertEquals(false, isValidPtzAbsoluteValue(-0.01f))
+        assertEquals(false, isValidPtzAbsoluteValue(Float.POSITIVE_INFINITY))
+    }
+
+    @Test
     fun mapsEveryNativePtzCommandResult() {
         assertEquals(NdiPtzCommandResult.ACCEPTED, 0.toPtzCommandResult())
         assertEquals(NdiPtzCommandResult.UNAVAILABLE, 1.toPtzCommandResult())

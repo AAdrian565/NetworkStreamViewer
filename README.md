@@ -73,6 +73,6 @@ When the signing properties are present, both debug and release APKs use this sa
 
 Use a physical Android device on the same LAN as an active NDI sender or receiver. Allow local-network and camera permissions when prompted. Wi-Fi client isolation, blocked mDNS traffic, or separate VLANs can prevent discovery and camera publishing.
 
-The source screen searches for up to five seconds, then presents an empty state with pull-down and button refresh actions. The player enters immersive landscape mode, overlays a floating Back button, and fit-scales the NDI display aspect ratio without stretching. This milestone renders video without audio. NDI discovery uses a Wi-Fi multicast lock only while the application is active.
+The source screen searches for up to five seconds, then presents an empty state with pull-down and button refresh actions. The player enters immersive landscape mode, overlays a floating Back button, and fit-scales the NDI display aspect ratio without stretching. Supported PTZ sources expose press-and-hold pan, tilt, zoom, and focus controls, presets, and autofocus; movement stops when controls are released or playback ends. This milestone renders video without audio. NDI discovery uses a Wi-Fi multicast lock only while the application is active.
 
 NDI® is a registered trademark of Vizrt NDI AB.

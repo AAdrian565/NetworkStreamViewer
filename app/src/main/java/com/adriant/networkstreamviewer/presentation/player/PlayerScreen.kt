@@ -75,6 +75,19 @@ fun PlayerScreen(
         bandwidth
     }
 
+    fun runPtzCommand(action: String, command: suspend () -> NdiPtzCommandResult) {
+        if (isDeveloperExample) {
+            ptzStatusMessage = "Demo: $action accepted."
+        } else {
+            coroutineScope.launch {
+                val result = command()
+                if (result != NdiPtzCommandResult.ACCEPTED) {
+                    ptzStatusMessage = result.ptzStatusMessage(action)
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -154,41 +167,39 @@ fun PlayerScreen(
                 .padding(16.dp)
         ) {
             Column(horizontalAlignment = Alignment.End) {
-                Box {
-                    SmallFloatingActionButton(
-                        onClick = { bandwidthMenuExpanded = true },
-                        modifier = Modifier.semantics {
-                            contentDescription = "Playback bandwidth: ${bandwidth.label}"
+                if (!isPtzOverlayVisible) {
+                    Box {
+                        SmallFloatingActionButton(
+                            onClick = { bandwidthMenuExpanded = true },
+                            modifier = Modifier.semantics {
+                                contentDescription = "Playback bandwidth: ${bandwidth.label}"
+                            }
+                        ) {
+                            Text(bandwidth.shortLabel)
                         }
-                    ) {
-                        Text(bandwidth.shortLabel)
-                    }
-                    DropdownMenu(
-                        expanded = bandwidthMenuExpanded,
-                        onDismissRequest = { bandwidthMenuExpanded = false }
-                    ) {
-                        NdiBandwidth.entries.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option.label) },
-                                onClick = {
-                                    bandwidthMenuExpanded = false
-                                    bandwidth = option
-                                    automaticFallbackToLow = false
-                                }
-                            )
+                        DropdownMenu(
+                            expanded = bandwidthMenuExpanded,
+                            onDismissRequest = { bandwidthMenuExpanded = false }
+                        ) {
+                            NdiBandwidth.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.label) },
+                                    onClick = {
+                                        bandwidthMenuExpanded = false
+                                        bandwidth = option
+                                        automaticFallbackToLow = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-                if (isPtzSupported) {
+                if (isPtzSupported && !isPtzOverlayVisible) {
                     Spacer(Modifier.size(8.dp))
                     SmallFloatingActionButton(
-                        onClick = { isPtzOverlayVisible = !isPtzOverlayVisible },
+                        onClick = { isPtzOverlayVisible = true },
                         modifier = Modifier.semantics {
-                            contentDescription = if (isPtzOverlayVisible) {
-                                "Hide PTZ controls"
-                            } else {
-                                "Show PTZ controls"
-                            }
+                            contentDescription = "Show PTZ controls"
                         }
                     ) {
                         Text("PTZ")
@@ -210,8 +221,24 @@ fun PlayerScreen(
             )
         }
 
-        PtzPresetControls(
+        PtzControlPanel(
             isSupported = isPtzSupported && isPtzOverlayVisible,
+            onPanTiltSpeed = { pan, tilt ->
+                runPtzCommand("Pan/tilt movement") { playerController.panTiltSpeed(pan, tilt) }
+            },
+            onZoomSpeed = { speed ->
+                runPtzCommand("Zoom movement") { playerController.zoomSpeed(speed) }
+            },
+            onFocusSpeed = { speed ->
+                runPtzCommand("Focus movement") { playerController.focusSpeed(speed) }
+            },
+            onStop = {
+                if (!isDeveloperExample) playerController.stopPtzMovement()
+            },
+            onAutoFocus = {
+                runPtzCommand("Autofocus") { playerController.autoFocus() }
+            },
+            onToggleVisibility = { isPtzOverlayVisible = false },
             onRecallPreset = { presetNumber ->
                 if (isDeveloperExample) {
                     ptzStatusMessage = "Demo: preset $presetNumber recall accepted."
@@ -238,8 +265,8 @@ fun PlayerScreen(
                 }
             },
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 88.dp)
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 16.dp)
         )
 
         ptzStatusMessage?.let { message ->
@@ -259,7 +286,10 @@ fun PlayerScreen(
 
     DisposableEffect(source) {
         onDispose {
-            if (!isDeveloperExample) playerController.stop()
+            if (!isDeveloperExample) {
+                playerController.stopPtzMovement()
+                playerController.stop()
+            }
         }
     }
 }
@@ -294,4 +324,11 @@ internal fun NdiPtzCommandResult.presetStatusMessage(action: String): String = w
     NdiPtzCommandResult.UNAVAILABLE -> "$action unavailable; the camera is not connected or PTZ-capable."
     NdiPtzCommandResult.REJECTED -> "$action was rejected by the camera."
     NdiPtzCommandResult.INVALID_ARGUMENT -> "$action has an invalid preset number or speed."
+}
+
+internal fun NdiPtzCommandResult.ptzStatusMessage(action: String): String = when (this) {
+    NdiPtzCommandResult.ACCEPTED -> "$action accepted."
+    NdiPtzCommandResult.UNAVAILABLE -> "$action unavailable; the camera is not connected or PTZ-capable."
+    NdiPtzCommandResult.REJECTED -> "$action was rejected by the camera."
+    NdiPtzCommandResult.INVALID_ARGUMENT -> "$action has an invalid PTZ value."
 }

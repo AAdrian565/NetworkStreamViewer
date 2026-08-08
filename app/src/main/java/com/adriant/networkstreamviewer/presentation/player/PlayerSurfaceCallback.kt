@@ -32,6 +32,7 @@ internal fun playerSurfaceCallback(
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         onPtzSupportChanged(false)
+        playerController.stopPtzMovement()
         playerController.stop()
     }
 }

@@ -1,20 +1,22 @@
 package com.adriant.networkstreamviewer.presentation.player
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledIconToggleButton
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,13 +43,27 @@ internal fun PtzPresetControls(
     if (!isSupported) return
 
     var mode by remember { mutableStateOf(PresetMode.CALL) }
+    var pendingStorePreset by remember { mutableStateOf<Int?>(null) }
+
+    fun selectPreset(presetNumber: Int) {
+        if (mode == PresetMode.SAVE) {
+            pendingStorePreset = presetNumber
+        } else {
+            mode.perform(presetNumber, onRecallPreset, onStorePreset, onClearPreset)
+            mode = PresetMode.CALL
+        }
+    }
 
     Column(
         modifier = modifier
-            .width(200.dp)
+            .fillMaxWidth()
             .semantics { contentDescription = "PTZ preset controls" }
     ) {
-        Text("PTZ presets", style = MaterialTheme.typography.labelLarge)
+        Text(
+            "STORED PRESETS",
+            color = Color(0xFF00E5F0),
+            style = MaterialTheme.typography.labelSmall
+        )
         Text(
             text = when (mode) {
                 PresetMode.CALL -> "Select a preset to call"
@@ -55,7 +71,7 @@ internal fun PtzPresetControls(
                 PresetMode.CLEAR -> "Select a preset to clear"
             },
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.78f)
+            color = Color.White.copy(alpha = 0.58f)
         )
         Spacer(Modifier.size(10.dp))
         PRESET_ROWS.forEachIndexed { rowIndex, presets ->
@@ -67,10 +83,7 @@ internal fun PtzPresetControls(
                     PresetButton(
                         presetNumber = presetNumber,
                         mode = mode,
-                        onClick = {
-                            mode.perform(presetNumber, onRecallPreset, onStorePreset, onClearPreset)
-                            mode = PresetMode.CALL
-                        },
+                        onClick = { selectPreset(presetNumber) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -95,10 +108,7 @@ internal fun PtzPresetControls(
             PresetButton(
                 presetNumber = 0,
                 mode = mode,
-                onClick = {
-                    mode.perform(0, onRecallPreset, onStorePreset, onClearPreset)
-                    mode = PresetMode.CALL
-                },
+                onClick = { selectPreset(0) },
                 modifier = Modifier.weight(1f)
             )
             ModeButton(
@@ -113,6 +123,29 @@ internal fun PtzPresetControls(
             }
         }
     }
+
+    pendingStorePreset?.let { presetNumber ->
+        AlertDialog(
+            onDismissRequest = { pendingStorePreset = null },
+            title = { Text("Overwrite preset $presetNumber?") },
+            text = { Text("This replaces the camera position and focus stored in this preset.") },
+            dismissButton = {
+                TextButton(onClick = { pendingStorePreset = null }) { Text("Cancel") }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onStorePreset(presetNumber)
+                        pendingStorePreset = null
+                        mode = PresetMode.CALL
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Confirm overwrite preset $presetNumber"
+                    }
+                ) { Text("Overwrite") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -122,27 +155,21 @@ private fun PresetButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        val buttonModifier = Modifier
-            .size(48.dp)
+    Box(
+        modifier = modifier
+            .height(42.dp)
+            .background(Color(0xFF202126), RoundedCornerShape(7.dp))
+            .clickable(onClick = onClick)
             .semantics {
                 contentDescription = when (mode) {
                     PresetMode.CALL -> "Call preset $presetNumber"
                     PresetMode.SAVE -> "Save preset $presetNumber"
                     PresetMode.CLEAR -> "Clear preset $presetNumber"
                 }
-            }
-        if (mode == PresetMode.CALL) FilledIconButton(
-            onClick = onClick,
-            modifier = buttonModifier
-        ) {
-            Text(presetNumber.toString())
-        } else IconButton(
-            onClick = onClick,
-            modifier = buttonModifier
-        ) {
-            Text(presetNumber.toString(), color = Color.White)
-        }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(presetNumber.toString(), color = Color.White)
     }
 }
 
@@ -154,15 +181,18 @@ private fun ModeButton(
     modifier: Modifier = Modifier,
     icon: @Composable () -> Unit
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        FilledIconToggleButton(
-            checked = selected,
-            onCheckedChange = onSelectedChange,
-            modifier = Modifier
-                .size(48.dp)
-                .semantics { this.contentDescription = contentDescription },
-            content = icon
-        )
+    Box(
+        modifier = modifier
+            .height(42.dp)
+            .background(
+                if (selected) Color(0xFF075C65) else Color(0xFF202126),
+                RoundedCornerShape(7.dp)
+            )
+            .clickable { onSelectedChange(!selected) }
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center
+    ) {
+        icon()
     }
 }
 

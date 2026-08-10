@@ -13,6 +13,7 @@ set_target_properties(ndi PROPERTIES
 
 add_library(ndi_bridge SHARED
     media_codec_decoder.cpp
+    ndi_audio_capture.cpp
     ndi_bridge.cpp
 )
 target_include_directories(ndi_bridge PRIVATE "${NDI_SDK_DIR}/include")

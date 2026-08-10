@@ -20,8 +20,8 @@ This roadmap prioritizes improvements that make source discovery and playback mo
 
 ## Phase 3: Monitoring and Audio
 
-- [ ] Add synchronized NDI audio playback through Android `AudioTrack`.
-- [ ] Provide mute and volume controls in the floating playback interface.
+- [x] Add synchronized NDI audio playback through Android `AudioTrack`.
+- [x] Provide mute and volume controls in the floating playback interface.
 - [ ] Add an optional stream-information overlay showing resolution, frame rate, Full NDI/HX codec, bitrate, dropped frames, latency, and connection status.
 - [ ] Record useful playback diagnostics for troubleshooting without exposing private network information.
 

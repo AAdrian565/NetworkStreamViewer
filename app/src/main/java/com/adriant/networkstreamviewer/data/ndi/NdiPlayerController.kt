@@ -1,6 +1,12 @@
 package com.adriant.networkstreamviewer.data.ndi
 
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.Surface
+import com.adriant.networkstreamviewer.domain.model.NdiAudioDiagnostics
+import com.adriant.networkstreamviewer.domain.model.NdiAudioLevels
+import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
@@ -15,7 +21,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class NdiPlayerController {
+class NdiPlayerController(context: Context) {
+    private val applicationContext = context.applicationContext
+    private val mainHandler = Handler(Looper.getMainLooper())
+    @Volatile private var audioPlayer: NdiAudioPlayer? = null
+    @Volatile private var audioVolume = 1f
+    @Volatile private var audioMuted = false
     private val lifecycleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lifecycleMutex = Mutex()
     private val operationGeneration = AtomicLong(0L)
@@ -27,7 +38,12 @@ class NdiPlayerController {
         onAspectRatioChanged: (Float) -> Unit,
         onPlaybackStateChanged: (NdiPlaybackState) -> Unit,
         onPtzSupportChanged: (Boolean) -> Unit,
-        onStartFailed: () -> Unit
+        onStartFailed: () -> Unit,
+        initialAudioVolume: Float = audioVolume,
+        initialAudioMuted: Boolean = audioMuted,
+        onAudioStatusChanged: (NdiAudioStatus) -> Unit = {},
+        onAudioLevelsChanged: (NdiAudioLevels) -> Unit = {},
+        onAudioDiagnosticsChanged: (NdiAudioDiagnostics) -> Unit = {}
     ) {
         val operation = operationGeneration.incrementAndGet()
         lifecycleScope.launch {
@@ -64,7 +80,24 @@ class NdiPlayerController {
                     false
                 }
 
-                if (!started && operation == operationGeneration.get()) {
+                if (started && operation == operationGeneration.get()) {
+                    val audio = NdiAudioPlayer(
+                        context = applicationContext,
+                        onStatusChanged = { value ->
+                            postAudioCallback(operation) { onAudioStatusChanged(value) }
+                        },
+                        onLevelsChanged = { value ->
+                            postAudioCallback(operation) { onAudioLevelsChanged(value) }
+                        },
+                        onDiagnosticsChanged = { value ->
+                            postAudioCallback(operation) { onAudioDiagnosticsChanged(value) }
+                        }
+                    )
+                    audio.setVolume(initialAudioVolume)
+                    audio.setMuted(initialAudioMuted)
+                    audioPlayer = audio
+                    audio.start()
+                } else if (!started && operation == operationGeneration.get()) {
                     onStartFailed()
                 }
             }
@@ -146,6 +179,20 @@ class NdiPlayerController {
             NdiNative.whiteBalanceManual(red, blue).toPtzCommandResult()
         }
 
+    fun setAudioVolume(volume: Float) {
+        audioVolume = if (volume.isFinite()) volume.coerceIn(0f, 1f) else 0f
+        audioPlayer?.setVolume(audioVolume)
+    }
+
+    fun setAudioMuted(muted: Boolean) {
+        audioMuted = muted
+        audioPlayer?.setMuted(muted)
+    }
+
+    fun retryAudioFocus() {
+        audioPlayer?.retryAudioFocus()
+    }
+
     /** Sends a stop even when the composable scope is being cancelled. */
     fun stopPtzMovement() {
         lifecycleScope.launch {
@@ -158,6 +205,8 @@ class NdiPlayerController {
         lifecycleScope.launch {
             lifecycleMutex.withLock {
                 if (operation != operationGeneration.get()) return@withLock
+                audioPlayer?.stop()
+                audioPlayer = null
                 NdiNative.stopReceiver()
             }
         }
@@ -168,10 +217,19 @@ class NdiPlayerController {
         lifecycleScope.launch {
             lifecycleMutex.withLock {
                 if (operation != operationGeneration.get()) return@withLock
+                audioPlayer?.stop()
+                audioPlayer = null
                 NdiNative.stopReceiver()
             }
         }.invokeOnCompletion {
             lifecycleScope.cancel()
+        }
+    }
+
+    private fun postAudioCallback(operation: Long, callback: () -> Unit) {
+        if (operation != operationGeneration.get()) return
+        mainHandler.post {
+            if (operation == operationGeneration.get()) callback()
         }
     }
 

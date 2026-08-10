@@ -6,6 +6,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
 import com.adriant.networkstreamviewer.domain.repository.UpdateRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,7 +29,8 @@ fun NdiApp(
 ) {
     val permission = rememberLocalNetworkPermissionState()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val playerController = remember { NdiPlayerController() }
+    val applicationContext = LocalContext.current.applicationContext
+    val playerController = remember(applicationContext) { NdiPlayerController(applicationContext) }
     val selectedSource = uiState.selectedSource
 
     DisposableEffect(playerController) {

@@ -7,12 +7,14 @@
 #include <Processing.NDI.Advanced.h>
 
 #include "media_codec_decoder.h"
+#include "ndi_audio_capture.h"
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
@@ -31,9 +33,10 @@ std::mutex g_sender_mutex;
 bool g_initialized = false;
 NDIlib_find_instance_t g_finder = nullptr;
 NDIlib_recv_instance_t g_receiver = nullptr;
+std::unique_ptr<NdiAudioCapture> g_audio_capture;
 NDIlib_send_instance_t g_sender = nullptr;
 ANativeWindow* g_window = nullptr;
-jobject g_aspect_ratio_listener = nullptr;
+jobject g_playback_listener = nullptr;
 jmethodID g_aspect_ratio_method = nullptr;
 jmethodID g_playback_state_method = nullptr;
 jmethodID g_ptz_support_method = nullptr;
@@ -363,6 +366,11 @@ void stop_receiver_locked(JNIEnv* env) {
     g_receiving.store(false);
     if (g_receive_thread.joinable()) g_receive_thread.join();
 
+    if (g_audio_capture != nullptr) {
+        g_audio_capture->stop();
+        g_audio_capture.reset();
+    }
+
     if (g_receiver != nullptr) {
         // Stop unconditionally: capability can disappear before surface destruction.
         NDIlib_recv_ptz_pan_tilt_speed(g_receiver, 0.0f, 0.0f);
@@ -375,9 +383,9 @@ void stop_receiver_locked(JNIEnv* env) {
         ANativeWindow_release(g_window);
         g_window = nullptr;
     }
-    if (g_aspect_ratio_listener != nullptr) {
-        env->DeleteGlobalRef(g_aspect_ratio_listener);
-        g_aspect_ratio_listener = nullptr;
+    if (g_playback_listener != nullptr) {
+        env->DeleteGlobalRef(g_playback_listener);
+        g_playback_listener = nullptr;
     }
     g_aspect_ratio_method = nullptr;
     g_playback_state_method = nullptr;
@@ -593,8 +601,8 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         log_error("Could not prepare the playback callbacks");
         return JNI_FALSE;
     }
-    g_aspect_ratio_listener = env->NewGlobalRef(aspect_ratio_listener);
-    if (g_aspect_ratio_listener == nullptr) {
+    g_playback_listener = env->NewGlobalRef(aspect_ratio_listener);
+    if (g_playback_listener == nullptr) {
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
         ANativeWindow_release(g_window);
@@ -606,13 +614,24 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         return JNI_FALSE;
     }
 
+    try {
+        auto audio_capture = std::make_unique<NdiAudioCapture>();
+        if (audio_capture->start(name, url, kReceiverConfig)) {
+            g_audio_capture = std::move(audio_capture);
+        } else {
+            log_error("Could not initialize the NDI audio receiver; continuing with video");
+        }
+    } catch (...) {
+        log_error("Could not allocate the NDI audio receiver; continuing with video");
+    }
+
     g_receiving.store(true);
     g_receive_thread = std::thread(
         receive_loop,
         g_receiver,
         g_window,
         g_java_vm,
-        g_aspect_ratio_listener,
+        g_playback_listener,
         g_aspect_ratio_method,
         g_playback_state_method,
         g_ptz_support_method,
@@ -767,6 +786,48 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_stopReceiver(JNIEnv* env, jobject) {
     std::scoped_lock lock(g_lifecycle_mutex);
     stop_receiver_locked(env);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_fillAudioBuffer(
+    JNIEnv* env,
+    jobject,
+    jobject buffer,
+    jint sample_rate,
+    jint channel_count,
+    jint samples_per_channel
+) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (buffer == nullptr || sample_rate < 8000 || sample_rate > 192000 ||
+        channel_count < 1 || channel_count > 2 || samples_per_channel < 1 ||
+        samples_per_channel > 4096) {
+        return -2;
+    }
+    void* address = env->GetDirectBufferAddress(buffer);
+    const jlong capacity = env->GetDirectBufferCapacity(buffer);
+    if (address == nullptr || capacity < 0) return -2;
+    const jlong required_bytes = static_cast<jlong>(channel_count) *
+        static_cast<jlong>(samples_per_channel) * 2;
+    if (required_bytes <= 0 || capacity < required_bytes) return -2;
+    if (g_audio_capture == nullptr) return -1;
+    return g_audio_capture->fill_interleaved_16s(
+        static_cast<int16_t*>(address),
+        static_cast<size_t>(required_bytes / 2),
+        sample_rate,
+        channel_count,
+        samples_per_channel
+    );
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_getAudioPerformance(JNIEnv* env, jobject) {
+    std::shared_lock lock(g_lifecycle_mutex);
+    if (g_audio_capture == nullptr) return env->NewLongArray(0);
+    const auto performance = g_audio_capture->performance();
+    const jlong values[] = {performance.first, performance.second};
+    jlongArray result = env->NewLongArray(2);
+    if (result != nullptr) env->SetLongArrayRegion(result, 0, 2, values);
+    return result;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

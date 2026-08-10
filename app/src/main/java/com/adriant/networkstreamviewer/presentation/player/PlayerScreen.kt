@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,6 +20,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,6 +31,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.adriant.networkstreamviewer.data.ndi.NdiPlayerController
+import com.adriant.networkstreamviewer.domain.model.NdiAudioDiagnostics
+import com.adriant.networkstreamviewer.domain.model.NdiAudioLevels
+import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
@@ -64,10 +66,22 @@ fun PlayerScreen(
         )
     }
     var retryGeneration by remember(source, bandwidth) { mutableIntStateOf(0) }
-    var bandwidthMenuExpanded by remember { mutableStateOf(false) }
     var isPtzSupported by remember(source, bandwidth) { mutableStateOf(isDeveloperExample) }
     var isPtzOverlayVisible by remember(source, bandwidth) { mutableStateOf(false) }
+    var isPlaybackOverlayVisible by remember(source) { mutableStateOf(false) }
     var ptzStatusMessage by remember(source) { mutableStateOf<String?>(null) }
+    var audioVolume by rememberSaveable(source.name, source.url) { mutableFloatStateOf(1f) }
+    var audioMuted by rememberSaveable(source.name, source.url) { mutableStateOf(false) }
+    var showAudioDbLabels by rememberSaveable(source.name, source.url) { mutableStateOf(true) }
+    var audioStatus by remember(source, bandwidth) {
+        mutableStateOf(if (isDeveloperExample) NdiAudioStatus.PLAYING else NdiAudioStatus.STARTING)
+    }
+    var audioLevels by remember(source, bandwidth) {
+        mutableStateOf(if (isDeveloperExample) NdiAudioLevels(-12f, -14f, -18f, -20f) else NdiAudioLevels.FLOOR)
+    }
+    var audioDiagnostics by remember(source, bandwidth) {
+        mutableStateOf(NdiAudioDiagnostics(status = if (isDeveloperExample) NdiAudioStatus.PLAYING else NdiAudioStatus.STARTING))
+    }
     val coroutineScope = rememberCoroutineScope()
     val receiverBandwidth = if (bandwidth == NdiBandwidth.AUTOMATIC && automaticFallbackToLow) {
         NdiBandwidth.LOWEST
@@ -127,6 +141,17 @@ fun PlayerScreen(
                                             }
                                         }
                                     },
+                                    initialAudioVolume = audioVolume,
+                                    initialAudioMuted = audioMuted,
+                                    onAudioStatusChanged = { value ->
+                                        post { audioStatus = value }
+                                    },
+                                    onAudioLevelsChanged = { value ->
+                                        post { audioLevels = value }
+                                    },
+                                    onAudioDiagnosticsChanged = { value ->
+                                        post { audioDiagnostics = value }
+                                    },
                                     onPtzSupportChanged = { isSupported ->
                                         post {
                                             if (isPtzSupported && !isSupported) {
@@ -161,40 +186,22 @@ fun PlayerScreen(
             CenteredBackArrow()
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.End) {
-                if (!isPtzOverlayVisible) {
-                    Box {
-                        SmallFloatingActionButton(
-                            onClick = { bandwidthMenuExpanded = true },
-                            modifier = Modifier.semantics {
-                                contentDescription = "Playback bandwidth: ${bandwidth.label}"
-                            }
-                        ) {
-                            Text(bandwidth.shortLabel)
-                        }
-                        DropdownMenu(
-                            expanded = bandwidthMenuExpanded,
-                            onDismissRequest = { bandwidthMenuExpanded = false }
-                        ) {
-                            NdiBandwidth.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option.label) },
-                                    onClick = {
-                                        bandwidthMenuExpanded = false
-                                        bandwidth = option
-                                        automaticFallbackToLow = false
-                                    }
-                                )
-                            }
-                        }
+        if (!isPtzOverlayVisible && !isPlaybackOverlayVisible) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                SmallFloatingActionButton(
+                    onClick = { isPlaybackOverlayVisible = true },
+                    modifier = Modifier.semantics {
+                        contentDescription = "Show playback controls"
                     }
+                ) {
+                    Text("AV")
                 }
-                if (isPtzSupported && !isPtzOverlayVisible) {
+                if (isPtzSupported) {
                     Spacer(Modifier.size(8.dp))
                     SmallFloatingActionButton(
                         onClick = { isPtzOverlayVisible = true },
@@ -215,11 +222,52 @@ fun PlayerScreen(
                 automaticFallbackToLow = automaticFallbackToLow,
                 playbackState = playbackState,
                 isDeveloperExample = isDeveloperExample,
+                audioDiagnostics = audioDiagnostics,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 16.dp)
             )
         }
+
+        if (!audioMuted && !isPtzOverlayVisible) {
+            AudioMeter(
+                levels = audioLevels,
+                status = audioStatus,
+                showDbLabels = showAudioDbLabels,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            )
+        }
+
+        PlaybackControlPanel(
+            isVisible = isPlaybackOverlayVisible,
+            bandwidth = bandwidth,
+            audioStatus = audioStatus,
+            audioVolume = audioVolume,
+            audioMuted = audioMuted,
+            showAudioDbLabels = showAudioDbLabels,
+            onBandwidthChanged = { value ->
+                bandwidth = value
+                automaticFallbackToLow = false
+            },
+            onAudioMutedChanged = { value ->
+                audioMuted = value
+                if (!isDeveloperExample) playerController.setAudioMuted(value)
+            },
+            onAudioVolumeChanged = { value ->
+                audioVolume = value
+                if (!isDeveloperExample) playerController.setAudioVolume(value)
+            },
+            onShowAudioDbLabelsChanged = { value -> showAudioDbLabels = value },
+            onRetryAudioFocus = {
+                if (!isDeveloperExample) playerController.retryAudioFocus()
+            },
+            onClose = { isPlaybackOverlayVisible = false },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 16.dp)
+        )
 
         PtzControlPanel(
             isSupported = isPtzSupported && isPtzOverlayVisible,

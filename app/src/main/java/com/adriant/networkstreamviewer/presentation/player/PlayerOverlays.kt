@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.adriant.networkstreamviewer.domain.model.NdiAudioDiagnostics
+import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiSource
@@ -47,6 +49,7 @@ internal fun PlaybackDiagnostics(
     automaticFallbackToLow: Boolean,
     playbackState: NdiPlaybackState,
     isDeveloperExample: Boolean,
+    audioDiagnostics: NdiAudioDiagnostics = NdiAudioDiagnostics(),
     modifier: Modifier = Modifier
 ) {
     val details = source.details
@@ -77,6 +80,19 @@ internal fun PlaybackDiagnostics(
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text("Codec: $codec • $resolution • $framesPerSecond FPS")
             Text("Bandwidth: $bandwidthText • State: $connectionText")
+            val audioText = when (audioDiagnostics.status) {
+                NdiAudioStatus.STARTING -> "Starting"
+                NdiAudioStatus.PLAYING -> "Playing"
+                NdiAudioStatus.NO_SIGNAL -> "No signal"
+                NdiAudioStatus.FOCUS_LOST -> "Focus lost"
+                NdiAudioStatus.OUTPUT_FAILURE -> "Output failure"
+            }
+            Text(
+                "Audio: ${audioDiagnostics.outputSampleRate / 1000} kHz " +
+                    "${if (audioDiagnostics.outputChannelCount == 2) "stereo" else "mono"} • " +
+                    "$audioText • Dropped: ${audioDiagnostics.droppedFrames} • " +
+                    "Underruns: ${audioDiagnostics.underrunCount}"
+            )
         }
     }
 }

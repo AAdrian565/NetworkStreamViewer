@@ -1,6 +1,7 @@
 package com.adriant.networkstreamviewer.data.ndi
 
 import android.view.Surface
+import java.nio.ByteBuffer
 
 internal object NdiNative {
     init {
@@ -31,6 +32,13 @@ internal object NdiNative {
     external fun whiteBalanceManual(red: Float, blue: Float): Int
     external fun stopPtzMovement(): Int
     external fun stopReceiver()
+    external fun fillAudioBuffer(
+        buffer: ByteBuffer,
+        sampleRate: Int,
+        channelCount: Int,
+        samplesPerChannel: Int
+    ): Long
+    external fun getAudioPerformance(): LongArray
     external fun startSender(name: String): Boolean
     external fun sendVideoFrame(
         nv12Data: ByteArray,

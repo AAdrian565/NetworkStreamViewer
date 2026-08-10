@@ -36,7 +36,10 @@ class AppSettingsRepository(
 
     fun setDeveloperMode(enabled: Boolean) = edit { putBoolean(KEY_DEVELOPER_MODE, enabled) }
 
-    fun setDiscoveryRefreshInterval(interval: DiscoveryRefreshInterval) = edit { putString(KEY_DISCOVERY_REFRESH_INTERVAL, interval.name) }
+    fun setDiscoveryRefreshInterval(interval: DiscoveryRefreshInterval) =
+        edit {
+            putString(KEY_DISCOVERY_REFRESH_INTERVAL, interval.name)
+        }
 
     private fun edit(action: SharedPreferences.Editor.() -> Unit) {
         preferences.edit().apply(action).apply()

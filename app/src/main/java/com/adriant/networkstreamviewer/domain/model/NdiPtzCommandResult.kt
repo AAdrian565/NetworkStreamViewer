@@ -4,5 +4,5 @@ enum class NdiPtzCommandResult {
     ACCEPTED,
     UNAVAILABLE,
     REJECTED,
-    INVALID_ARGUMENT
+    INVALID_ARGUMENT,
 }

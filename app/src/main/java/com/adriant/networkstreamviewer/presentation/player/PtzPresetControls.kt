@@ -38,7 +38,7 @@ internal fun PtzPresetControls(
     onRecallPreset: (Int) -> Unit,
     onStorePreset: (Int) -> Unit,
     onClearPreset: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (!isSupported) return
 
@@ -55,36 +55,38 @@ internal fun PtzPresetControls(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = "PTZ preset controls" }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "PTZ preset controls" },
     ) {
         Text(
             "STORED PRESETS",
             color = Color(0xFF00E5F0),
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall,
         )
         Text(
-            text = when (mode) {
-                PresetMode.CALL -> "Select a preset to call"
-                PresetMode.SAVE -> "Select a preset to save"
-                PresetMode.CLEAR -> "Select a preset to clear"
-            },
+            text =
+                when (mode) {
+                    PresetMode.CALL -> "Select a preset to call"
+                    PresetMode.SAVE -> "Select a preset to save"
+                    PresetMode.CLEAR -> "Select a preset to clear"
+                },
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.58f)
+            color = Color.White.copy(alpha = 0.58f),
         )
         Spacer(Modifier.size(10.dp))
         PRESET_ROWS.forEachIndexed { rowIndex, presets ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 presets.forEach { presetNumber ->
                     PresetButton(
                         presetNumber = presetNumber,
                         mode = mode,
                         onClick = { selectPreset(presetNumber) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -93,7 +95,7 @@ internal fun PtzPresetControls(
         Spacer(Modifier.size(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ModeButton(
                 selected = mode == PresetMode.CLEAR,
@@ -101,7 +103,7 @@ internal fun PtzPresetControls(
                     mode = if (it) PresetMode.CLEAR else PresetMode.CALL
                 },
                 contentDescription = "Clear preset mode",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 ClearIcon()
             }
@@ -109,7 +111,7 @@ internal fun PtzPresetControls(
                 presetNumber = 0,
                 mode = mode,
                 onClick = { selectPreset(0) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             ModeButton(
                 selected = mode == PresetMode.SAVE,
@@ -117,7 +119,7 @@ internal fun PtzPresetControls(
                     mode = if (it) PresetMode.SAVE else PresetMode.CALL
                 },
                 contentDescription = "Save preset mode",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 SaveIcon()
             }
@@ -139,11 +141,12 @@ internal fun PtzPresetControls(
                         pendingStorePreset = null
                         mode = PresetMode.CALL
                     },
-                    modifier = Modifier.semantics {
-                        contentDescription = "Confirm overwrite preset $presetNumber"
-                    }
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = "Confirm overwrite preset $presetNumber"
+                        },
                 ) { Text("Overwrite") }
-            }
+            },
         )
     }
 }
@@ -153,21 +156,23 @@ private fun PresetButton(
     presetNumber: Int,
     mode: PresetMode,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .height(42.dp)
-            .background(Color(0xFF202126), RoundedCornerShape(7.dp))
-            .clickable(onClick = onClick)
-            .semantics {
-                contentDescription = when (mode) {
-                    PresetMode.CALL -> "Call preset $presetNumber"
-                    PresetMode.SAVE -> "Save preset $presetNumber"
-                    PresetMode.CLEAR -> "Clear preset $presetNumber"
-                }
-            },
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .height(42.dp)
+                .background(Color(0xFF202126), RoundedCornerShape(7.dp))
+                .clickable(onClick = onClick)
+                .semantics {
+                    contentDescription =
+                        when (mode) {
+                            PresetMode.CALL -> "Call preset $presetNumber"
+                            PresetMode.SAVE -> "Save preset $presetNumber"
+                            PresetMode.CLEAR -> "Clear preset $presetNumber"
+                        }
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Text(presetNumber.toString(), color = Color.White)
     }
@@ -179,18 +184,18 @@ private fun ModeButton(
     onSelectedChange: (Boolean) -> Unit,
     contentDescription: String,
     modifier: Modifier = Modifier,
-    icon: @Composable () -> Unit
+    icon: @Composable () -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .height(42.dp)
-            .background(
-                if (selected) Color(0xFF075C65) else Color(0xFF202126),
-                RoundedCornerShape(7.dp)
-            )
-            .clickable { onSelectedChange(!selected) }
-            .semantics { this.contentDescription = contentDescription },
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .height(42.dp)
+                .background(
+                    if (selected) Color(0xFF075C65) else Color(0xFF202126),
+                    RoundedCornerShape(7.dp),
+                ).clickable { onSelectedChange(!selected) }
+                .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
     ) {
         icon()
     }
@@ -205,19 +210,19 @@ private fun SaveIcon() {
             color = color,
             topLeft = Offset(size.width * 0.18f, size.height * 0.12f),
             size = Size(size.width * 0.64f, size.height * 0.76f),
-            style = Stroke(width = strokeWidth)
+            style = Stroke(width = strokeWidth),
         )
         drawRect(
             color = color,
             topLeft = Offset(size.width * 0.32f, size.height * 0.12f),
             size = Size(size.width * 0.36f, size.height * 0.26f),
-            style = Stroke(width = strokeWidth)
+            style = Stroke(width = strokeWidth),
         )
         drawRect(
             color = color,
             topLeft = Offset(size.width * 0.32f, size.height * 0.58f),
             size = Size(size.width * 0.36f, size.height * 0.30f),
-            style = Stroke(width = strokeWidth)
+            style = Stroke(width = strokeWidth),
         )
     }
 }
@@ -231,13 +236,13 @@ private fun ClearIcon() {
             color = color,
             start = Offset(size.width * 0.28f, size.height * 0.20f),
             end = Offset(size.width * 0.72f, size.height * 0.80f),
-            strokeWidth = strokeWidth
+            strokeWidth = strokeWidth,
         )
         drawLine(
             color = color,
             start = Offset(size.width * 0.72f, size.height * 0.20f),
             end = Offset(size.width * 0.28f, size.height * 0.80f),
-            strokeWidth = strokeWidth
+            strokeWidth = strokeWidth,
         )
     }
 }
@@ -245,13 +250,14 @@ private fun ClearIcon() {
 private enum class PresetMode {
     CALL,
     SAVE,
-    CLEAR;
+    CLEAR,
+    ;
 
     fun perform(
         presetNumber: Int,
         onRecallPreset: (Int) -> Unit,
         onStorePreset: (Int) -> Unit,
-        onClearPreset: (Int) -> Unit
+        onClearPreset: (Int) -> Unit,
     ) = when (this) {
         CALL -> onRecallPreset(presetNumber)
         SAVE -> onStorePreset(presetNumber)
@@ -259,8 +265,9 @@ private enum class PresetMode {
     }
 }
 
-private val PRESET_ROWS = listOf(
-    listOf(1, 2, 3),
-    listOf(4, 5, 6),
-    listOf(7, 8, 9)
-)
+private val PRESET_ROWS =
+    listOf(
+        listOf(1, 2, 3),
+        listOf(4, 5, 6),
+        listOf(7, 8, 9),
+    )

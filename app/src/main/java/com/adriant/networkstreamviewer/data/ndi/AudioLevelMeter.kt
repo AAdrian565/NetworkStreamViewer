@@ -11,7 +11,7 @@ import kotlin.math.sqrt
 
 /** Computes display-ready stereo levels without changing the buffer consumed by AudioTrack. */
 class AudioLevelMeter(
-    private val clock: Clock = Clock { System.nanoTime() / NANOS_PER_MILLISECOND }
+    private val clock: Clock = Clock { System.nanoTime() / NANOS_PER_MILLISECOND },
 ) {
     fun interface Clock {
         fun nowMillis(): Long
@@ -29,7 +29,10 @@ class AudioLevelMeter(
     private var rightClipUntil = 0L
     private var published = NdiAudioLevels.FLOOR
 
-    fun process(buffer: ByteBuffer, nowMillis: Long = clock.nowMillis()): NdiAudioLevels {
+    fun process(
+        buffer: ByteBuffer,
+        nowMillis: Long = clock.nowMillis(),
+    ): NdiAudioLevels {
         if (lastProcessMillis != Long.MIN_VALUE && nowMillis - lastProcessMillis < PUBLISH_INTERVAL_MS) {
             return published
         }
@@ -71,14 +74,15 @@ class AudioLevelMeter(
         if (rightClipped) rightClipUntil = nowMillis + CLIP_HOLD_MS
         lastUpdateMillis = nowMillis
 
-        published = NdiAudioLevels(
-            leftPeakDbfs = leftPeak,
-            rightPeakDbfs = rightPeak,
-            leftRmsDbfs = leftRms,
-            rightRmsDbfs = rightRms,
-            leftClipped = nowMillis < leftClipUntil,
-            rightClipped = nowMillis < rightClipUntil
-        )
+        published =
+            NdiAudioLevels(
+                leftPeakDbfs = leftPeak,
+                rightPeakDbfs = rightPeak,
+                leftRmsDbfs = leftRms,
+                rightRmsDbfs = rightRms,
+                leftClipped = nowMillis < leftClipUntil,
+                rightClipped = nowMillis < rightClipUntil,
+            )
         return published
     }
 
@@ -97,7 +101,12 @@ class AudioLevelMeter(
         return published
     }
 
-    private fun peakBallistics(previous: Float, current: Float, now: Long, left: Boolean): Float {
+    private fun peakBallistics(
+        previous: Float,
+        current: Float,
+        now: Long,
+        left: Boolean,
+    ): Float {
         if (current >= previous) {
             if (left) leftPeakHoldUntil = now + PEAK_HOLD_MS else rightPeakHoldUntil = now + PEAK_HOLD_MS
             return current
@@ -108,14 +117,19 @@ class AudioLevelMeter(
         return max(FLOOR_DBFS, previous - elapsedSeconds * PEAK_FALL_DB_PER_SECOND)
     }
 
-    private fun ballistics(previous: Float, current: Float, elapsedMillis: Long): Float {
+    private fun ballistics(
+        previous: Float,
+        current: Float,
+        elapsedMillis: Long,
+    ): Float {
         if (current >= previous || elapsedMillis <= 0L) return current
         val alpha = 1f - exp(-elapsedMillis / RMS_RELEASE_MS.toFloat())
         return previous + (current - previous) * alpha
     }
 
-    private fun toDbfs(linear: Float): Float = (20f * ln(max(linear, MIN_LINEAR)) / LN_10)
-        .coerceIn(FLOOR_DBFS, 0f)
+    private fun toDbfs(linear: Float): Float =
+        (20f * ln(max(linear, MIN_LINEAR)) / LN_10)
+            .coerceIn(FLOOR_DBFS, 0f)
 
     private companion object {
         const val CHANNELS = 2

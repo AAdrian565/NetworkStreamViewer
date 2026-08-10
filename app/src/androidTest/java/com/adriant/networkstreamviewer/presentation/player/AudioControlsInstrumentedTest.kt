@@ -23,7 +23,7 @@ class AudioControlsInstrumentedTest {
                 muted = muted,
                 onMutedChanged = { muted = it },
                 onVolumeChanged = {},
-                onRetryFocus = {}
+                onRetryFocus = {},
             )
         }
         composeRule.onNodeWithContentDescription("Mute audio").assertIsDisplayed().performClick()

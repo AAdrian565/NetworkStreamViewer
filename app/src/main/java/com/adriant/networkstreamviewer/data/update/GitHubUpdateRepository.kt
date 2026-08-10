@@ -11,7 +11,9 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-class GitHubUpdateRepository(context: Context) : UpdateRepository {
+class GitHubUpdateRepository(
+    context: Context,
+) : UpdateRepository {
     private val updateDirectory = File(context.cacheDir, "updates")
 
     override suspend fun findLatestUpdate(currentVersion: String): AppUpdate? =
@@ -22,64 +24,67 @@ class GitHubUpdateRepository(context: Context) : UpdateRepository {
                     throw IOException("GitHub returned HTTP ${connection.responseCode}")
                 }
 
-                val release = connection.inputStream.bufferedReader().use { reader ->
-                    JSONObject(reader.readText())
-                }
+                val release =
+                    connection.inputStream.bufferedReader().use { reader ->
+                        JSONObject(reader.readText())
+                    }
                 val latestVersion = release.getString("tag_name").removePrefix("v")
                 if (compareVersions(latestVersion, currentVersion) <= 0) return@withContext null
 
-                val apkUrl = release.getJSONArray("assets")
-                    .let { assets ->
-                        (0 until assets.length())
-                            .asSequence()
-                            .map { assets.getJSONObject(it) }
-                            .firstOrNull {
-                                it.optString("name").endsWith(".apk", ignoreCase = true)
-                            }
-                    }
-                    ?.getString("browser_download_url")
-                    ?: throw IOException("The GitHub release does not contain an APK")
+                val apkUrl =
+                    release
+                        .getJSONArray("assets")
+                        .let { assets ->
+                            (0 until assets.length())
+                                .asSequence()
+                                .map { assets.getJSONObject(it) }
+                                .firstOrNull {
+                                    it.optString("name").endsWith(".apk", ignoreCase = true)
+                                }
+                        }?.getString("browser_download_url")
+                        ?: throw IOException("The GitHub release does not contain an APK")
 
                 AppUpdate(
                     version = latestVersion,
                     downloadUrl = apkUrl,
-                    releaseUrl = release.optString("html_url")
+                    releaseUrl = release.optString("html_url"),
                 )
             } finally {
                 connection.disconnect()
             }
         }
 
-    override suspend fun downloadUpdate(update: AppUpdate): String = withContext(Dispatchers.IO) {
-        updateDirectory.mkdirs()
-        val temporaryFile = File(updateDirectory, "update.apk.download")
-        val apkFile = File(updateDirectory, "NetworkStreamViewer-v${update.version}.apk")
-        temporaryFile.delete()
-
-        val connection = openConnection(update.downloadUrl)
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IOException("GitHub returned HTTP ${connection.responseCode}")
-            }
-            val contentLength = connection.contentLengthLong
-            if (contentLength > MAX_APK_SIZE_BYTES) {
-                throw IOException("The downloaded APK is too large")
-            }
-
-            connection.inputStream.use { input ->
-                temporaryFile.outputStream().use { output ->
-                    input.copyTo(output, BUFFER_SIZE)
-                }
-            }
-            if (!temporaryFile.renameTo(apkFile)) {
-                throw IOException("Could not prepare the downloaded APK")
-            }
-            apkFile.absolutePath
-        } finally {
-            connection.disconnect()
+    override suspend fun downloadUpdate(update: AppUpdate): String =
+        withContext(Dispatchers.IO) {
+            updateDirectory.mkdirs()
+            val temporaryFile = File(updateDirectory, "update.apk.download")
+            val apkFile = File(updateDirectory, "NetworkStreamViewer-v${update.version}.apk")
             temporaryFile.delete()
+
+            val connection = openConnection(update.downloadUrl)
+            try {
+                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                    throw IOException("GitHub returned HTTP ${connection.responseCode}")
+                }
+                val contentLength = connection.contentLengthLong
+                if (contentLength > MAX_APK_SIZE_BYTES) {
+                    throw IOException("The downloaded APK is too large")
+                }
+
+                connection.inputStream.use { input ->
+                    temporaryFile.outputStream().use { output ->
+                        input.copyTo(output, BUFFER_SIZE)
+                    }
+                }
+                if (!temporaryFile.renameTo(apkFile)) {
+                    throw IOException("Could not prepare the downloaded APK")
+                }
+                apkFile.absolutePath
+            } finally {
+                connection.disconnect()
+                temporaryFile.delete()
+            }
         }
-    }
 
     private fun openConnection(url: String): HttpURLConnection =
         (URL(url).openConnection() as HttpURLConnection).apply {
@@ -100,7 +105,10 @@ class GitHubUpdateRepository(context: Context) : UpdateRepository {
     }
 }
 
-internal fun compareVersions(first: String, second: String): Int {
+internal fun compareVersions(
+    first: String,
+    second: String,
+): Int {
     val firstParts = first.substringBefore('-').removePrefix("v").split('.')
     val secondParts = second.substringBefore('-').removePrefix("v").split('.')
     val partCount = maxOf(firstParts.size, secondParts.size)

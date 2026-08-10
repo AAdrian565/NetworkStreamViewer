@@ -49,86 +49,105 @@ internal fun PlaybackDiagnostics(
     automaticFallbackToLow: Boolean,
     playbackState: NdiPlaybackState,
     isDeveloperExample: Boolean,
+    modifier: Modifier = Modifier,
     audioDiagnostics: NdiAudioDiagnostics = NdiAudioDiagnostics(),
-    modifier: Modifier = Modifier
 ) {
     val details = source.details
-    val codec = when (details?.format) {
-        NdiVideoFormat.FULL_NDI -> "Full NDI"
-        NdiVideoFormat.HX_H264 -> "H.264"
-        NdiVideoFormat.HX_HEVC -> "HEVC"
-        null -> "Unknown"
-    }
+    val codec =
+        when (details?.format) {
+            NdiVideoFormat.FULL_NDI -> "Full NDI"
+            NdiVideoFormat.HX_H264 -> "H.264"
+            NdiVideoFormat.HX_HEVC -> "HEVC"
+            null -> "Unknown"
+        }
     val resolution = details?.let { "${it.width}×${it.height}" } ?: "Unknown"
-    val framesPerSecond = details?.let {
-        if (it.frameRateDenominator > 0) {
-            String.format(Locale.US, "%.2f", it.frameRateNumerator.toDouble() / it.frameRateDenominator)
-                .removeSuffix(".00")
-        } else "Unknown"
-    } ?: "Unknown"
-    val bandwidthText = if (bandwidth == NdiBandwidth.AUTOMATIC && automaticFallbackToLow) {
-        "Automatic → Preview / Low"
-    } else bandwidth.label
+    val framesPerSecond =
+        details?.let {
+            if (it.frameRateDenominator > 0) {
+                String
+                    .format(Locale.US, "%.2f", it.frameRateNumerator.toDouble() / it.frameRateDenominator)
+                    .removeSuffix(".00")
+            } else {
+                "Unknown"
+            }
+        } ?: "Unknown"
+    val bandwidthText =
+        if (bandwidth == NdiBandwidth.AUTOMATIC && automaticFallbackToLow) {
+            "Automatic → Preview / Low"
+        } else {
+            bandwidth.label
+        }
     val connectionText = if (isDeveloperExample) "Playing (simulated)" else playbackState.label
 
     Surface(
         color = Color.Black.copy(alpha = 0.78f),
         contentColor = Color.White,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        modifier = modifier.semantics { contentDescription = "Playback diagnostics" }
+        shape =
+            androidx.compose.foundation.shape
+                .RoundedCornerShape(12.dp),
+        modifier = modifier.semantics { contentDescription = "Playback diagnostics" },
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text("Codec: $codec • $resolution • $framesPerSecond FPS")
             Text("Bandwidth: $bandwidthText • State: $connectionText")
-            val audioText = when (audioDiagnostics.status) {
-                NdiAudioStatus.STARTING -> "Starting"
-                NdiAudioStatus.PLAYING -> "Playing"
-                NdiAudioStatus.NO_SIGNAL -> "No signal"
-                NdiAudioStatus.FOCUS_LOST -> "Focus lost"
-                NdiAudioStatus.OUTPUT_FAILURE -> "Output failure"
-            }
+            val audioText =
+                when (audioDiagnostics.status) {
+                    NdiAudioStatus.STARTING -> "Starting"
+                    NdiAudioStatus.PLAYING -> "Playing"
+                    NdiAudioStatus.NO_SIGNAL -> "No signal"
+                    NdiAudioStatus.FOCUS_LOST -> "Focus lost"
+                    NdiAudioStatus.OUTPUT_FAILURE -> "Output failure"
+                }
             Text(
                 "Audio: ${audioDiagnostics.outputSampleRate / 1000} kHz " +
                     "${if (audioDiagnostics.outputChannelCount == 2) "stereo" else "mono"} • " +
                     "$audioText • Dropped: ${audioDiagnostics.droppedFrames} • " +
-                    "Underruns: ${audioDiagnostics.underrunCount}"
+                    "Underruns: ${audioDiagnostics.underrunCount}",
             )
         }
     }
 }
 
 @Composable
-internal fun PlaybackStatePanel(state: NdiPlaybackState, onRetry: () -> Unit) {
-    val isProgress = state == NdiPlaybackState.CONNECTING ||
-        state == NdiPlaybackState.WAITING_FOR_KEYFRAME
-    val title = when (state) {
-        NdiPlaybackState.CONNECTING -> "Connecting…"
-        NdiPlaybackState.WAITING_FOR_KEYFRAME -> "Waiting for video…"
-        NdiPlaybackState.PLAYING -> return
-        NdiPlaybackState.DISCONNECTED -> "Source disconnected"
-        NdiPlaybackState.UNSUPPORTED_CODEC -> "Unsupported video format"
-        NdiPlaybackState.DECODER_FAILURE -> "Video decoder failed"
-        NdiPlaybackState.INSUFFICIENT_BANDWIDTH -> "Network bandwidth is insufficient"
-    }
-    val detail = when (state) {
-        NdiPlaybackState.CONNECTING -> "Opening the NDI stream."
-        NdiPlaybackState.WAITING_FOR_KEYFRAME -> "Waiting for the next decodable keyframe."
-        NdiPlaybackState.DISCONNECTED -> "The source is offline or no longer reachable."
-        NdiPlaybackState.UNSUPPORTED_CODEC -> "This stream uses a format the app cannot display."
-        NdiPlaybackState.DECODER_FAILURE -> "Android could not start or continue the hardware decoder."
-        NdiPlaybackState.INSUFFICIENT_BANDWIDTH -> "Try Preview/Low or move to a faster network."
-        NdiPlaybackState.PLAYING -> ""
-    }
+internal fun PlaybackStatePanel(
+    state: NdiPlaybackState,
+    onRetry: () -> Unit,
+) {
+    val isProgress =
+        state == NdiPlaybackState.CONNECTING ||
+            state == NdiPlaybackState.WAITING_FOR_KEYFRAME
+    val title =
+        when (state) {
+            NdiPlaybackState.CONNECTING -> "Connecting…"
+            NdiPlaybackState.WAITING_FOR_KEYFRAME -> "Waiting for video…"
+            NdiPlaybackState.PLAYING -> return
+            NdiPlaybackState.DISCONNECTED -> "Source disconnected"
+            NdiPlaybackState.UNSUPPORTED_CODEC -> "Unsupported video format"
+            NdiPlaybackState.DECODER_FAILURE -> "Video decoder failed"
+            NdiPlaybackState.INSUFFICIENT_BANDWIDTH -> "Network bandwidth is insufficient"
+        }
+    val detail =
+        when (state) {
+            NdiPlaybackState.CONNECTING -> "Opening the NDI stream."
+            NdiPlaybackState.WAITING_FOR_KEYFRAME -> "Waiting for the next decodable keyframe."
+            NdiPlaybackState.DISCONNECTED -> "The source is offline or no longer reachable."
+            NdiPlaybackState.UNSUPPORTED_CODEC -> "This stream uses a format the app cannot display."
+            NdiPlaybackState.DECODER_FAILURE -> "Android could not start or continue the hardware decoder."
+            NdiPlaybackState.INSUFFICIENT_BANDWIDTH -> "Try Preview/Low or move to a faster network."
+            NdiPlaybackState.PLAYING -> ""
+        }
 
     Surface(
         color = Color.Black.copy(alpha = 0.78f),
         contentColor = Color.White,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        modifier = Modifier.widthIn(max = 380.dp).padding(24.dp)
+        shape =
+            androidx.compose.foundation.shape
+                .RoundedCornerShape(16.dp),
+        modifier = Modifier.widthIn(max = 380.dp).padding(24.dp),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(24.dp),
         ) {
             if (isProgress) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
@@ -149,15 +168,16 @@ internal fun PlaybackStatePanel(state: NdiPlaybackState, onRetry: () -> Unit) {
 internal fun CenteredBackArrow() {
     val color = LocalContentColor.current
     Canvas(modifier = Modifier.size(24.dp)) {
-        val arrow = Path().apply {
-            moveTo(size.width * 0.70f, size.height * 0.20f)
-            lineTo(size.width * 0.30f, size.height * 0.50f)
-            lineTo(size.width * 0.70f, size.height * 0.80f)
-        }
+        val arrow =
+            Path().apply {
+                moveTo(size.width * 0.70f, size.height * 0.20f)
+                lineTo(size.width * 0.30f, size.height * 0.50f)
+                lineTo(size.width * 0.70f, size.height * 0.80f)
+            }
         drawPath(
             path = arrow,
             color = color,
-            style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
 }

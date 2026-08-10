@@ -11,13 +11,13 @@ class PtzStatusMessageTest {
         assertTrue(
             NdiPtzCommandResult.UNAVAILABLE
                 .presetStatusMessage("Recall")
-                .contains("unavailable")
+                .contains("unavailable"),
         )
         assertTrue(NdiPtzCommandResult.REJECTED.presetStatusMessage("Recall").contains("rejected"))
         assertTrue(
             NdiPtzCommandResult.INVALID_ARGUMENT
                 .presetStatusMessage("Recall")
-                .contains("invalid")
+                .contains("invalid"),
         )
     }
 }

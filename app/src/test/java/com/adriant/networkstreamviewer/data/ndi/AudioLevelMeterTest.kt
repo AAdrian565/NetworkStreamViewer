@@ -1,10 +1,10 @@
 package com.adriant.networkstreamviewer.data.ndi
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class AudioLevelMeterTest {
     @Test
@@ -83,7 +83,10 @@ class AudioLevelMeterTest {
 
     private fun meter() = AudioLevelMeter(AudioLevelMeter.Clock { 0L })
 
-    private fun block(left: Int, right: Int): ByteBuffer =
+    private fun block(
+        left: Int,
+        right: Int,
+    ): ByteBuffer =
         ByteBuffer.allocateDirect(8).order(ByteOrder.nativeOrder()).apply {
             asShortBuffer().put(shortArrayOf(left.toShort(), right.toShort(), left.toShort(), right.toShort()))
         }

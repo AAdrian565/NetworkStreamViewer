@@ -1,8 +1,6 @@
 package com.adriant.networkstreamviewer.presentation.camera
 
 import android.os.Build
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -24,6 +24,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,50 +35,51 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.adriant.networkstreamviewer.data.camera.NdiCameraSenderController
-import com.adriant.networkstreamviewer.domain.model.normalizeNdiStreamName
 import com.adriant.networkstreamviewer.domain.model.CameraLens
 import com.adriant.networkstreamviewer.domain.model.CameraResolution
 import com.adriant.networkstreamviewer.domain.model.CameraSenderSettings
 import com.adriant.networkstreamviewer.domain.model.cameraFrameRateOptions
+import com.adriant.networkstreamviewer.domain.model.normalizeNdiStreamName
 import com.adriant.networkstreamviewer.presentation.rememberCameraPermissionState
 
 @Composable
 fun CameraSenderScreen(
     localNetworkPermissionGranted: Boolean,
     onRequestLocalNetworkPermission: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val cameraPermission = rememberCameraPermissionState()
     var streamName by rememberSaveable { mutableStateOf("${Build.MODEL} Camera") }
     var selectedResolution by rememberSaveable { mutableStateOf(CameraResolution.HD) }
-    var selectedFrameRate by rememberSaveable { mutableStateOf(30) }
+    var selectedFrameRate by rememberSaveable { mutableIntStateOf(DEFAULT_FRAME_RATE) }
     var selectedLens by rememberSaveable { mutableStateOf(CameraLens.BACK) }
     var cameraReady by remember { mutableStateOf(false) }
-    var previewWidth by remember { mutableStateOf(1280) }
-    var previewHeight by remember { mutableStateOf(720) }
-    var configuredFrameRate by remember { mutableStateOf(30) }
+    var previewWidth by remember { mutableIntStateOf(DEFAULT_PREVIEW_WIDTH) }
+    var previewHeight by remember { mutableIntStateOf(DEFAULT_PREVIEW_HEIGHT) }
+    var configuredFrameRate by remember { mutableIntStateOf(DEFAULT_FRAME_RATE) }
     var isStreaming by remember { mutableStateOf(false) }
-    var sentFrameCount by remember { mutableStateOf(0L) }
-    var receiverCount by remember { mutableStateOf(0) }
+    var sentFrameCount by remember { mutableLongStateOf(0L) }
+    var receiverCount by remember { mutableIntStateOf(0) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val controller = remember {
-        NdiCameraSenderController(
-            context = context.applicationContext,
-            onCameraReadyChanged = { cameraReady = it },
-            onCameraConfigured = { width, height, frameRate ->
-                previewWidth = width
-                previewHeight = height
-                configuredFrameRate = frameRate
-            },
-            onSenderProgress = { frames, receivers ->
-                sentFrameCount = frames
-                receiverCount = receivers
-            },
-            onStreamingStopped = { isStreaming = false },
-            onError = { errorMessage = it }
-        )
-    }
+    val controller =
+        remember {
+            NdiCameraSenderController(
+                context = context.applicationContext,
+                onCameraReadyChanged = { cameraReady = it },
+                onCameraConfigured = { width, height, frameRate ->
+                    previewWidth = width
+                    previewHeight = height
+                    configuredFrameRate = frameRate
+                },
+                onSenderProgress = { frames, receivers ->
+                    sentFrameCount = frames
+                    receiverCount = receivers
+                },
+                onStreamingStopped = { isStreaming = false },
+                onError = { errorMessage = it },
+            )
+        }
 
     DisposableEffect(controller) {
         onDispose { controller.stopCamera() }
@@ -84,51 +87,56 @@ fun CameraSenderScreen(
 
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onBack) { Text("Back") }
                 Text(
                     text = "Stream camera to NDI®",
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineSmall,
                 )
             }
             Spacer(Modifier.height(16.dp))
 
             when {
-                !localNetworkPermissionGranted -> PermissionCard(
-                    message = "Local-network access is required to publish an NDI® stream.",
-                    buttonText = "Allow local network",
-                    onRequestPermission = onRequestLocalNetworkPermission
-                )
+                !localNetworkPermissionGranted ->
+                    PermissionCard(
+                        message = "Local-network access is required to publish an NDI® stream.",
+                        buttonText = "Allow local network",
+                        onRequestPermission = onRequestLocalNetworkPermission,
+                    )
 
-                !cameraPermission.isGranted -> PermissionCard(
-                    message = "Camera access is required to capture video for the stream.",
-                    buttonText = "Allow camera",
-                    onRequestPermission = cameraPermission.request
-                )
+                !cameraPermission.isGranted ->
+                    PermissionCard(
+                        message = "Camera access is required to capture video for the stream.",
+                        buttonText = "Allow camera",
+                        onRequestPermission = cameraPermission.request,
+                    )
 
                 else -> {
-                    val settings = CameraSenderSettings(
-                        resolution = selectedResolution,
-                        frameRate = selectedFrameRate,
-                        lens = selectedLens
-                    )
+                    val settings =
+                        CameraSenderSettings(
+                            resolution = selectedResolution,
+                            frameRate = selectedFrameRate,
+                            lens = selectedLens,
+                        )
                     CameraPreview(
                         controller = controller,
                         settings = settings,
                         bufferWidth = previewWidth,
                         bufferHeight = previewHeight,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f),
                     )
                     Spacer(Modifier.height(16.dp))
                     if (isStreaming) {
@@ -137,7 +145,7 @@ fun CameraSenderScreen(
                                 controller.stopStreaming()
                                 isStreaming = false
                             },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text("Stop streaming")
                         }
@@ -148,7 +156,7 @@ fun CameraSenderScreen(
                                 FilterChip(
                                     selected = selectedLens == lens,
                                     onClick = { selectedLens = lens },
-                                    label = { Text(lens.label) }
+                                    label = { Text(lens.label) },
                                 )
                             }
                         }
@@ -159,7 +167,7 @@ fun CameraSenderScreen(
                                 FilterChip(
                                     selected = selectedResolution == resolution,
                                     onClick = { selectedResolution = resolution },
-                                    label = { Text(resolution.label) }
+                                    label = { Text(resolution.label) },
                                 )
                             }
                         }
@@ -170,14 +178,15 @@ fun CameraSenderScreen(
                                 FilterChip(
                                     selected = selectedFrameRate == frameRate,
                                     onClick = { selectedFrameRate = frameRate },
-                                    label = { Text("$frameRate FPS") }
+                                    label = { Text("$frameRate FPS") },
                                 )
                             }
                         }
                         Text(
-                            text = "Preview: ${previewWidth}×$previewHeight at $configuredFrameRate FPS. " +
-                                "The closest camera-supported mode is used.",
-                            style = MaterialTheme.typography.bodySmall
+                            text =
+                                "Preview: $previewWidth×$previewHeight at $configuredFrameRate FPS. " +
+                                    "The closest camera-supported mode is used.",
+                            style = MaterialTheme.typography.bodySmall,
                         )
                         Spacer(Modifier.height(12.dp))
                         OutlinedTextField(
@@ -185,7 +194,7 @@ fun CameraSenderScreen(
                             onValueChange = { streamName = it.take(64) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("NDI stream name") }
+                            label = { Text("NDI stream name") },
                         )
                         Spacer(Modifier.height(12.dp))
                         Button(
@@ -198,32 +207,34 @@ fun CameraSenderScreen(
                                 isStreaming = controller.startStreaming(normalizedName)
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = cameraReady && streamName.isNotBlank()
+                            enabled = cameraReady && streamName.isNotBlank(),
                         ) {
                             Text("Start streaming")
                         }
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = when {
-                            errorMessage != null -> errorMessage.orEmpty()
-                            isStreaming && sentFrameCount == 0L ->
-                                "Starting the camera stream…"
-                            isStreaming && receiverCount == 0 ->
-                                "Live — $sentFrameCount frames sent. Waiting for an NDI® receiver. " +
-                                    "Keep this screen open and connect from another device."
-                            isStreaming ->
-                                "Live — $sentFrameCount frames sent to $receiverCount " +
-                                    "receiver${if (receiverCount == 1) "" else "s"}. Keep this screen open."
-                            cameraReady -> "Camera ready. Choose a name and start streaming."
-                            else -> "Starting camera…"
-                        },
+                        text =
+                            when {
+                                errorMessage != null -> errorMessage.orEmpty()
+                                isStreaming && sentFrameCount == 0L ->
+                                    "Starting the camera stream…"
+                                isStreaming && receiverCount == 0 ->
+                                    "Live — $sentFrameCount frames sent. Waiting for an NDI® receiver. " +
+                                        "Keep this screen open and connect from another device."
+                                isStreaming ->
+                                    "Live — $sentFrameCount frames sent to $receiverCount " +
+                                        "receiver${if (receiverCount == 1) "" else "s"}. Keep this screen open."
+                                cameraReady -> "Camera ready. Choose a name and start streaming."
+                                else -> "Starting camera…"
+                            },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (errorMessage != null) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
+                        color =
+                            if (errorMessage != null) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
                     )
                 }
             }
@@ -231,16 +242,20 @@ fun CameraSenderScreen(
     }
 }
 
+private const val DEFAULT_PREVIEW_WIDTH = 1280
+private const val DEFAULT_PREVIEW_HEIGHT = 720
+private const val DEFAULT_FRAME_RATE = 30
+
 @Composable
 private fun PermissionCard(
     message: String,
     buttonText: String,
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(message)
             Button(onClick = onRequestPermission) { Text(buttonText) }

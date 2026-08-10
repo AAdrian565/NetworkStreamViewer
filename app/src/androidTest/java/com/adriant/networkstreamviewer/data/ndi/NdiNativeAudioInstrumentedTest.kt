@@ -1,12 +1,12 @@
 package com.adriant.networkstreamviewer.data.ndi
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import java.nio.ByteBuffer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.nio.ByteBuffer
 
 @RunWith(AndroidJUnit4::class)
 class NdiNativeAudioInstrumentedTest {

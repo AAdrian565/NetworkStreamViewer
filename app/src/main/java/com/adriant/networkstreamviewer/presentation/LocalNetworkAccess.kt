@@ -18,7 +18,7 @@ internal const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_N
 
 internal class LocalNetworkPermissionState(
     val isGranted: Boolean,
-    val request: () -> Unit
+    val request: () -> Unit,
 )
 
 @Composable
@@ -27,29 +27,31 @@ internal fun rememberLocalNetworkPermissionState(): LocalNetworkPermissionState 
     var isGranted by remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < 37 ||
-                context.checkSelfPermission(LOCAL_NETWORK_PERMISSION) == PackageManager.PERMISSION_GRANTED
+                context.checkSelfPermission(LOCAL_NETWORK_PERMISSION) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> isGranted = granted }
+    val launcher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted -> isGranted = granted }
 
     return LocalNetworkPermissionState(
         isGranted = isGranted,
-        request = { launcher.launch(LOCAL_NETWORK_PERMISSION) }
+        request = { launcher.launch(LOCAL_NETWORK_PERMISSION) },
     )
 }
 
 @Composable
 internal fun LocalNetworkMulticastEffect(enabled: Boolean) {
     val context = LocalContext.current
-    val multicastLock = remember {
-        val wifiManager =
-            context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        wifiManager.createMulticastLock("network-stream-viewer-discovery").apply {
-            setReferenceCounted(false)
+    val multicastLock =
+        remember {
+            val wifiManager =
+                context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            wifiManager.createMulticastLock("network-stream-viewer-discovery").apply {
+                setReferenceCounted(false)
+            }
         }
-    }
 
     DisposableEffect(enabled) {
         if (enabled && !multicastLock.isHeld) multicastLock.acquire()

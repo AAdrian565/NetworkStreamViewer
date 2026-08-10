@@ -5,11 +5,11 @@ data class NdiStreamDetails(
     val height: Int,
     val frameRateNumerator: Int,
     val frameRateDenominator: Int,
-    val format: NdiVideoFormat
+    val format: NdiVideoFormat,
 )
 
 enum class NdiVideoFormat {
     FULL_NDI,
     HX_H264,
-    HX_HEVC
+    HX_HEVC,
 }

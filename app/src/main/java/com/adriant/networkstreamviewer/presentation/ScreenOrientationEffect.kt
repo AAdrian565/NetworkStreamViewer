@@ -11,11 +11,12 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 internal fun ScreenOrientationEffect(showingPlayer: Boolean) {
     val activity = LocalContext.current.findActivity() ?: return
-    val requestedOrientation = if (showingPlayer) {
-        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-    } else {
-        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-    }
+    val requestedOrientation =
+        if (showingPlayer) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
 
     DisposableEffect(activity, requestedOrientation) {
         activity.requestedOrientation = requestedOrientation
@@ -23,8 +24,9 @@ internal fun ScreenOrientationEffect(showingPlayer: Boolean) {
     }
 }
 
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }

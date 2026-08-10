@@ -20,7 +20,7 @@ internal fun playerSurfaceCallback(
     initialAudioMuted: Boolean,
     onAudioStatusChanged: (NdiAudioStatus) -> Unit,
     onAudioLevelsChanged: (NdiAudioLevels) -> Unit,
-    onAudioDiagnosticsChanged: (NdiAudioDiagnostics) -> Unit
+    onAudioDiagnosticsChanged: (NdiAudioDiagnostics) -> Unit,
 ) = object : SurfaceHolder.Callback {
     override fun surfaceCreated(holder: SurfaceHolder) {
         onPlaybackStateChanged(NdiPlaybackState.CONNECTING)
@@ -39,11 +39,16 @@ internal fun playerSurfaceCallback(
             initialAudioMuted = initialAudioMuted,
             onAudioStatusChanged = onAudioStatusChanged,
             onAudioLevelsChanged = onAudioLevelsChanged,
-            onAudioDiagnosticsChanged = onAudioDiagnosticsChanged
+            onAudioDiagnosticsChanged = onAudioDiagnosticsChanged,
         )
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = Unit
+    override fun surfaceChanged(
+        holder: SurfaceHolder,
+        format: Int,
+        width: Int,
+        height: Int,
+    ) = Unit
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         onPtzSupportChanged(false)

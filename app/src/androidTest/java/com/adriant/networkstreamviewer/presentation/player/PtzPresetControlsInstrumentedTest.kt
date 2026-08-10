@@ -6,7 +6,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -24,7 +23,7 @@ class PtzPresetControlsInstrumentedTest {
                 isSupported = supported.value,
                 onRecallPreset = {},
                 onStorePreset = {},
-                onClearPreset = {}
+                onClearPreset = {},
             )
         }
 
@@ -45,7 +44,7 @@ class PtzPresetControlsInstrumentedTest {
                 isSupported = true,
                 onRecallPreset = { recalledPreset = it },
                 onStorePreset = { storedPreset = it },
-                onClearPreset = { clearedPreset = it }
+                onClearPreset = { clearedPreset = it },
             )
         }
 

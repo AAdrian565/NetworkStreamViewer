@@ -42,7 +42,7 @@ fun SettingsScreen(
     onDeveloperModeChanged: (Boolean) -> Unit,
     onDiscoveryRefreshIntervalChanged: (DiscoveryRefreshInterval) -> Unit,
     onOpenAbout: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var themeDialogOpen by remember { mutableStateOf(false) }
     var bandwidthDialogOpen by remember { mutableStateOf(false) }
@@ -50,43 +50,44 @@ fun SettingsScreen(
 
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState()),
         ) {
             SettingsHeader(title = "Settings", onBack = onBack)
             SettingsSection("Appearance")
             ValueSetting(
                 title = "Theme",
                 summary = settings.theme.label,
-                onClick = { themeDialogOpen = true }
+                onClick = { themeDialogOpen = true },
             )
             HorizontalDivider()
             SettingsSection("Playback")
             ValueSetting(
                 title = "Default quality",
                 summary = settings.defaultBandwidth.qualityLabel,
-                onClick = { bandwidthDialogOpen = true }
+                onClick = { bandwidthDialogOpen = true },
             )
             SwitchSetting(
                 title = "Keep screen awake",
                 summary = "Prevent the display from sleeping during playback.",
                 checked = settings.keepScreenAwake,
-                onCheckedChange = onKeepScreenAwakeChanged
+                onCheckedChange = onKeepScreenAwakeChanged,
             )
             SwitchSetting(
                 title = "Show playback diagnostics",
                 summary = "Show codec, bandwidth, resolution, FPS, and connection state.",
                 checked = settings.showPlaybackDiagnostics,
-                onCheckedChange = onShowPlaybackDiagnosticsChanged
+                onCheckedChange = onShowPlaybackDiagnosticsChanged,
             )
             HorizontalDivider()
             SettingsSection("Discovery")
             ValueSetting(
                 title = "Refresh interval",
                 summary = settings.discoveryRefreshInterval.label,
-                onClick = { refreshDialogOpen = true }
+                onClick = { refreshDialogOpen = true },
             )
             if (developerOptionsUnlocked) {
                 HorizontalDivider()
@@ -95,14 +96,14 @@ fun SettingsScreen(
                     title = "Developer mode",
                     summary = "Add a simulated empty stream that exposes player and PTZ UI.",
                     checked = settings.developerMode,
-                    onCheckedChange = onDeveloperModeChanged
+                    onCheckedChange = onDeveloperModeChanged,
                 )
             }
             HorizontalDivider()
             ValueSetting(
                 title = "About",
                 summary = "Version, NDI® attribution, and open-source licenses.",
-                onClick = onOpenAbout
+                onClick = onOpenAbout,
             )
             Spacer(Modifier.height(24.dp))
         }
@@ -118,7 +119,7 @@ fun SettingsScreen(
                 onThemeChanged(it)
                 themeDialogOpen = false
             },
-            onDismiss = { themeDialogOpen = false }
+            onDismiss = { themeDialogOpen = false },
         )
     }
     if (bandwidthDialogOpen) {
@@ -131,7 +132,7 @@ fun SettingsScreen(
                 onDefaultBandwidthChanged(it)
                 bandwidthDialogOpen = false
             },
-            onDismiss = { bandwidthDialogOpen = false }
+            onDismiss = { bandwidthDialogOpen = false },
         )
     }
     if (refreshDialogOpen) {
@@ -144,25 +145,30 @@ fun SettingsScreen(
                 onDiscoveryRefreshIntervalChanged(it)
                 refreshDialogOpen = false
             },
-            onDismiss = { refreshDialogOpen = false }
+            onDismiss = { refreshDialogOpen = false },
         )
     }
 }
 
 private val NdiBandwidth.qualityLabel: String
-    get() = when (this) {
-        NdiBandwidth.AUTOMATIC -> "Automatic"
-        NdiBandwidth.HIGHEST -> "Highest"
-        NdiBandwidth.LOWEST -> "Preview / Low"
-    }
+    get() =
+        when (this) {
+            NdiBandwidth.AUTOMATIC -> "Automatic"
+            NdiBandwidth.HIGHEST -> "Highest"
+            NdiBandwidth.LOWEST -> "Preview / Low"
+        }
 
 @Composable
-internal fun SettingsHeader(title: String, onBack: () -> Unit) {
+internal fun SettingsHeader(
+    title: String,
+    onBack: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = onBack) { Text("Back") }
         Text(title, style = MaterialTheme.typography.headlineSmall)
@@ -175,17 +181,22 @@ private fun SettingsSection(title: String) {
         text = title,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
     )
 }
 
 @Composable
-private fun ValueSetting(title: String, summary: String, onClick: () -> Unit) {
+private fun ValueSetting(
+    title: String,
+    summary: String,
+    onClick: () -> Unit,
+) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(4.dp))
@@ -198,14 +209,15 @@ private fun SwitchSetting(
     title: String,
     summary: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onCheckedChange(!checked) }
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
@@ -223,7 +235,7 @@ private fun <T> ChoiceDialog(
     selected: T,
     label: (T) -> String,
     onSelected: (T) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -232,21 +244,22 @@ private fun <T> ChoiceDialog(
             Column {
                 choices.forEach { choice ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelected(choice) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelected(choice) }
+                                .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = choice == selected,
-                            onClick = { onSelected(choice) }
+                            onClick = { onSelected(choice) },
                         )
                         Text(label(choice), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

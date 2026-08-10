@@ -13,8 +13,8 @@ import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
-import android.util.Size
 import android.util.Range
+import android.util.Size
 import android.view.Surface
 import com.adriant.networkstreamviewer.data.ndi.NdiNative
 import com.adriant.networkstreamviewer.domain.model.CameraLens
@@ -27,7 +27,7 @@ class NdiCameraSenderController(
     private val onCameraConfigured: (Int, Int, Int) -> Unit,
     private val onSenderProgress: (Long, Int) -> Unit,
     private val onStreamingStopped: () -> Unit,
-    private val onError: (String) -> Unit
+    private val onError: (String) -> Unit,
 ) {
     private val cameraManager = context.getSystemService(CameraManager::class.java)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -54,7 +54,7 @@ class NdiCameraSenderController(
     @SuppressLint("MissingPermission")
     fun startCamera(
         surfaceTexture: SurfaceTexture,
-        settings: CameraSenderSettings
+        settings: CameraSenderSettings,
     ) {
         stopCamera()
         val currentGeneration = ++generation
@@ -70,19 +70,21 @@ class NdiCameraSenderController(
             val handler = Handler(thread.looper)
             cameraThread = thread
             cameraHandler = handler
-            imageReader = ImageReader.newInstance(
-                frameSize.width,
-                frameSize.height,
-                ImageFormat.YUV_420_888,
-                IMAGE_QUEUE_SIZE
-            ).also { reader ->
-                reader.setOnImageAvailableListener(::onImageAvailable, handler)
-            }
+            imageReader =
+                ImageReader
+                    .newInstance(
+                        frameSize.width,
+                        frameSize.height,
+                        ImageFormat.YUV_420_888,
+                        IMAGE_QUEUE_SIZE,
+                    ).also { reader ->
+                        reader.setOnImageAvailableListener(::onImageAvailable, handler)
+                    }
 
             cameraManager.openCamera(
                 cameraId,
                 cameraStateCallback(currentGeneration, frameRateRange),
-                handler
+                handler,
             )
             mainHandler.post {
                 onCameraConfigured(frameSize.width, frameSize.height, settings.frameRate)
@@ -133,7 +135,7 @@ class NdiCameraSenderController(
 
     private fun cameraStateCallback(
         currentGeneration: Int,
-        frameRateRange: Range<Int>?
+        frameRateRange: Range<Int>?,
     ) = object : CameraDevice.StateCallback() {
         override fun onOpened(device: CameraDevice) {
             if (currentGeneration != generation) {
@@ -152,7 +154,10 @@ class NdiCameraSenderController(
             }
         }
 
-        override fun onError(device: CameraDevice, error: Int) {
+        override fun onError(
+            device: CameraDevice,
+            error: Int,
+        ) {
             device.close()
             if (currentGeneration == generation) {
                 notifyError("The camera reported an error ($error).")
@@ -165,7 +170,7 @@ class NdiCameraSenderController(
     private fun createCaptureSession(
         currentGeneration: Int,
         device: CameraDevice,
-        frameRateRange: Range<Int>?
+        frameRateRange: Range<Int>?,
     ) {
         val reader = imageReader ?: return
         val preview = previewSurface ?: return
@@ -181,16 +186,19 @@ class NdiCameraSenderController(
                     }
                     captureSession = session
                     try {
-                        val request = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply {
-                            surfaces.forEach(::addTarget)
-                            set(
-                                CaptureRequest.CONTROL_AF_MODE,
-                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO
-                            )
-                            frameRateRange?.let {
-                                set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, it)
-                            }
-                        }.build()
+                        val request =
+                            device
+                                .createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+                                .apply {
+                                    surfaces.forEach(::addTarget)
+                                    set(
+                                        CaptureRequest.CONTROL_AF_MODE,
+                                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO,
+                                    )
+                                    frameRateRange?.let {
+                                        set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, it)
+                                    }
+                                }.build()
                         session.setRepeatingRequest(request, null, handler)
                         setCameraReady(true)
                     } catch (_: Exception) {
@@ -207,16 +215,17 @@ class NdiCameraSenderController(
                     }
                 }
             },
-            handler
+            handler,
         )
     }
 
     private fun onImageAvailable(reader: ImageReader) {
-        val image = try {
-            reader.acquireLatestImage()
-        } catch (_: IllegalStateException) {
-            null
-        } ?: return
+        val image =
+            try {
+                reader.acquireLatestImage()
+            } catch (_: IllegalStateException) {
+                null
+            } ?: return
 
         try {
             if (!streaming) return
@@ -246,39 +255,55 @@ class NdiCameraSenderController(
 
     private fun chooseCameraId(lens: CameraLens): String {
         val ids = cameraManager.cameraIdList
-        val requestedFacing = when (lens) {
-            CameraLens.BACK -> CameraCharacteristics.LENS_FACING_BACK
-            CameraLens.FRONT -> CameraCharacteristics.LENS_FACING_FRONT
-        }
+        val requestedFacing =
+            when (lens) {
+                CameraLens.BACK -> CameraCharacteristics.LENS_FACING_BACK
+                CameraLens.FRONT -> CameraCharacteristics.LENS_FACING_FRONT
+            }
         return ids.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id)
+            cameraManager
+                .getCameraCharacteristics(id)
                 .get(CameraCharacteristics.LENS_FACING) == requestedFacing
         } ?: error("The selected camera is not available")
     }
 
-    private fun chooseFrameSize(cameraId: String, targetWidth: Int, targetHeight: Int): Size {
-        val map = cameraManager.getCameraCharacteristics(cameraId)
-            .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            ?: error("The camera has no output configuration")
-        val sizes = map.getOutputSizes(ImageFormat.YUV_420_888)
-            .orEmpty()
-            .filter { it.width % 2 == 0 && it.height % 2 == 0 }
+    private fun chooseFrameSize(
+        cameraId: String,
+        targetWidth: Int,
+        targetHeight: Int,
+    ): Size {
+        val map =
+            cameraManager
+                .getCameraCharacteristics(cameraId)
+                .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                ?: error("The camera has no output configuration")
+        val sizes =
+            map
+                .getOutputSizes(ImageFormat.YUV_420_888)
+                .orEmpty()
+                .filter { it.width % 2 == 0 && it.height % 2 == 0 }
         val targetAspectRatio = targetWidth.toFloat() / targetHeight
         val targetArea = targetWidth.toLong() * targetHeight
         return sizes.minWithOrNull(
             compareBy<Size> { abs(it.width.toFloat() / it.height - targetAspectRatio) }
-                .thenBy { abs(it.width.toLong() * it.height - targetArea) }
+                .thenBy { abs(it.width.toLong() * it.height - targetArea) },
         ) ?: error("The camera has no YUV output size")
     }
 
-    private fun chooseFrameRateRange(cameraId: String, targetFrameRate: Int): Range<Int>? {
-        val ranges = cameraManager.getCameraCharacteristics(cameraId)
-            .get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
-            .orEmpty()
-        return ranges.filter { targetFrameRate in it }
+    private fun chooseFrameRateRange(
+        cameraId: String,
+        targetFrameRate: Int,
+    ): Range<Int>? {
+        val ranges =
+            cameraManager
+                .getCameraCharacteristics(cameraId)
+                .get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                .orEmpty()
+        return ranges
+            .filter { targetFrameRate in it }
             .minWithOrNull(
                 compareBy<Range<Int>> { it.upper - it.lower }
-                    .thenBy { abs(it.upper - targetFrameRate) }
+                    .thenBy { abs(it.upper - targetFrameRate) },
             )
     }
 

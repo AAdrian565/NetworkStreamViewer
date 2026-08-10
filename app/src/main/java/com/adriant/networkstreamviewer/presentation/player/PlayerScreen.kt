@@ -16,12 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +50,7 @@ fun PlayerScreen(
     defaultBandwidth: NdiBandwidth,
     keepScreenAwake: Boolean,
     showDiagnostics: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     ImmersiveSystemBarsEffect()
     KeepScreenAwakeEffect(enabled = keepScreenAwake)
@@ -62,7 +62,7 @@ fun PlayerScreen(
     var automaticFallbackToLow by remember(source, bandwidth) { mutableStateOf(false) }
     var playbackState by remember(source, bandwidth) {
         mutableStateOf(
-            if (isDeveloperExample) NdiPlaybackState.PLAYING else NdiPlaybackState.CONNECTING
+            if (isDeveloperExample) NdiPlaybackState.PLAYING else NdiPlaybackState.CONNECTING,
         )
     }
     var retryGeneration by remember(source, bandwidth) { mutableIntStateOf(0) }
@@ -80,16 +80,22 @@ fun PlayerScreen(
         mutableStateOf(if (isDeveloperExample) NdiAudioLevels(-12f, -14f, -18f, -20f) else NdiAudioLevels.FLOOR)
     }
     var audioDiagnostics by remember(source, bandwidth) {
-        mutableStateOf(NdiAudioDiagnostics(status = if (isDeveloperExample) NdiAudioStatus.PLAYING else NdiAudioStatus.STARTING))
+        mutableStateOf(
+            NdiAudioDiagnostics(status = if (isDeveloperExample) NdiAudioStatus.PLAYING else NdiAudioStatus.STARTING),
+        )
     }
     val coroutineScope = rememberCoroutineScope()
-    val receiverBandwidth = if (bandwidth == NdiBandwidth.AUTOMATIC && automaticFallbackToLow) {
-        NdiBandwidth.LOWEST
-    } else {
-        bandwidth
-    }
+    val receiverBandwidth =
+        if (bandwidth == NdiBandwidth.AUTOMATIC && automaticFallbackToLow) {
+            NdiBandwidth.LOWEST
+        } else {
+            bandwidth
+        }
 
-    fun runPtzCommand(action: String, command: suspend () -> NdiPtzCommandResult) {
+    fun runPtzCommand(
+        action: String,
+        command: suspend () -> NdiPtzCommandResult,
+    ) {
         if (isDeveloperExample) {
             ptzStatusMessage = "Demo: $action accepted."
         } else {
@@ -103,17 +109,19 @@ fun PlayerScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        contentAlignment = Alignment.Center,
     ) {
         key(source.name, source.url, receiverBandwidth, retryGeneration) {
             if (isDeveloperExample) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF101010))
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF101010)),
                 )
             } else {
                 AndroidView(
@@ -160,11 +168,11 @@ fun PlayerScreen(
                                             isPtzSupported = isSupported
                                             if (!isSupported) isPtzOverlayVisible = false
                                         }
-                                    }
-                                )
+                                    },
+                                ),
                             )
                         }
-                    }
+                    },
                 )
             }
         }
@@ -172,16 +180,17 @@ fun PlayerScreen(
         if (playbackState != NdiPlaybackState.PLAYING) {
             PlaybackStatePanel(
                 state = playbackState,
-                onRetry = { retryGeneration++ }
+                onRetry = { retryGeneration++ },
             )
         }
 
         SmallFloatingActionButton(
             onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .semantics { contentDescription = "Back to source list" }
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+                    .semantics { contentDescription = "Back to source list" },
         ) {
             CenteredBackArrow()
         }
@@ -189,15 +198,17 @@ fun PlayerScreen(
         if (!isPtzOverlayVisible && !isPlaybackOverlayVisible) {
             Column(
                 horizontalAlignment = Alignment.End,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
             ) {
                 SmallFloatingActionButton(
                     onClick = { isPlaybackOverlayVisible = true },
-                    modifier = Modifier.semantics {
-                        contentDescription = "Show playback controls"
-                    }
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = "Show playback controls"
+                        },
                 ) {
                     Text("AV")
                 }
@@ -205,9 +216,10 @@ fun PlayerScreen(
                     Spacer(Modifier.size(8.dp))
                     SmallFloatingActionButton(
                         onClick = { isPtzOverlayVisible = true },
-                        modifier = Modifier.semantics {
-                            contentDescription = "Show PTZ controls"
-                        }
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = "Show PTZ controls"
+                            },
                     ) {
                         Text("PTZ")
                     }
@@ -223,9 +235,10 @@ fun PlayerScreen(
                 playbackState = playbackState,
                 isDeveloperExample = isDeveloperExample,
                 audioDiagnostics = audioDiagnostics,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 16.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp),
             )
         }
 
@@ -234,9 +247,10 @@ fun PlayerScreen(
                 levels = audioLevels,
                 status = audioStatus,
                 showDbLabels = showAudioDbLabels,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
             )
         }
 
@@ -264,9 +278,10 @@ fun PlayerScreen(
                 if (!isDeveloperExample) playerController.retryAudioFocus()
             },
             onClose = { isPlaybackOverlayVisible = false },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp),
         )
 
         PtzControlPanel(
@@ -290,42 +305,53 @@ fun PlayerScreen(
             onRecallPreset = { presetNumber ->
                 if (isDeveloperExample) {
                     ptzStatusMessage = "Demo: preset $presetNumber recall accepted."
-                } else coroutineScope.launch {
-                    ptzStatusMessage = playerController
-                        .recallPtzPreset(presetNumber)
-                        .presetStatusMessage("Preset $presetNumber recall")
+                } else {
+                    coroutineScope.launch {
+                        ptzStatusMessage =
+                            playerController
+                                .recallPtzPreset(presetNumber)
+                                .presetStatusMessage("Preset $presetNumber recall")
+                    }
                 }
             },
             onStorePreset = { presetNumber ->
                 if (isDeveloperExample) {
                     ptzStatusMessage = "Demo: preset $presetNumber store accepted."
-                } else coroutineScope.launch {
-                    ptzStatusMessage = playerController
-                        .storePtzPreset(presetNumber)
-                        .presetStatusMessage("Preset $presetNumber store")
+                } else {
+                    coroutineScope.launch {
+                        ptzStatusMessage =
+                            playerController
+                                .storePtzPreset(presetNumber)
+                                .presetStatusMessage("Preset $presetNumber store")
+                    }
                 }
             },
             onClearPreset = { presetNumber ->
-                ptzStatusMessage = if (isDeveloperExample) {
-                    "Demo: preset $presetNumber cleared."
-                } else {
-                    "Preset clearing is not supported by the NDI® PTZ API."
-                }
+                ptzStatusMessage =
+                    if (isDeveloperExample) {
+                        "Demo: preset $presetNumber cleared."
+                    } else {
+                        "Preset clearing is not supported by the NDI® PTZ API."
+                    }
             },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp),
         )
 
         ptzStatusMessage?.let { message ->
             Surface(
                 color = Color.Black.copy(alpha = 0.84f),
                 contentColor = Color.White,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-                    .semantics { contentDescription = "PTZ command status" }
+                shape =
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(12.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp)
+                        .semantics { contentDescription = "PTZ command status" },
             ) {
                 Text(message, modifier = Modifier.padding(12.dp))
             }
@@ -340,43 +366,4 @@ fun PlayerScreen(
             }
         }
     }
-}
-
-internal val NdiBandwidth.label: String
-    get() = when (this) {
-        NdiBandwidth.AUTOMATIC -> "Automatic"
-        NdiBandwidth.HIGHEST -> "Highest"
-        NdiBandwidth.LOWEST -> "Preview / Low"
-    }
-
-internal val NdiBandwidth.shortLabel: String
-    get() = when (this) {
-        NdiBandwidth.AUTOMATIC -> "Auto"
-        NdiBandwidth.HIGHEST -> "High"
-        NdiBandwidth.LOWEST -> "Low"
-    }
-
-internal val NdiPlaybackState.label: String
-    get() = when (this) {
-        NdiPlaybackState.CONNECTING -> "Connecting"
-        NdiPlaybackState.WAITING_FOR_KEYFRAME -> "Waiting for keyframe"
-        NdiPlaybackState.PLAYING -> "Playing"
-        NdiPlaybackState.DISCONNECTED -> "Disconnected"
-        NdiPlaybackState.UNSUPPORTED_CODEC -> "Unsupported codec"
-        NdiPlaybackState.DECODER_FAILURE -> "Decoder failure"
-        NdiPlaybackState.INSUFFICIENT_BANDWIDTH -> "Insufficient bandwidth"
-    }
-
-internal fun NdiPtzCommandResult.presetStatusMessage(action: String): String = when (this) {
-    NdiPtzCommandResult.ACCEPTED -> "$action accepted."
-    NdiPtzCommandResult.UNAVAILABLE -> "$action unavailable; the camera is not connected or PTZ-capable."
-    NdiPtzCommandResult.REJECTED -> "$action was rejected by the camera."
-    NdiPtzCommandResult.INVALID_ARGUMENT -> "$action has an invalid preset number or speed."
-}
-
-internal fun NdiPtzCommandResult.ptzStatusMessage(action: String): String = when (this) {
-    NdiPtzCommandResult.ACCEPTED -> "$action accepted."
-    NdiPtzCommandResult.UNAVAILABLE -> "$action unavailable; the camera is not connected or PTZ-capable."
-    NdiPtzCommandResult.REJECTED -> "$action was rejected by the camera."
-    NdiPtzCommandResult.INVALID_ARGUMENT -> "$action has an invalid PTZ value."
 }

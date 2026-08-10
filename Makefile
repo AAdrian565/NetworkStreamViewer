@@ -25,7 +25,7 @@ else
 $(error BUILD_TYPE must be either debug or release)
 endif
 
-.PHONY: help devices debug install install-release release icon clean
+.PHONY: help devices debug install install-release release lint format icon clean
 
 help:
 	@printf '%s\n' \
@@ -35,6 +35,8 @@ help:
 		'make devices                 List connected devices and their serials' \
 		'make release                 Build the release APK' \
 		'make debug                   Build the debug APK only' \
+		'make lint                    Run Kotlin and Android lint checks' \
+		'make format                  Format Kotlin and Gradle Kotlin files' \
 		'make icon                    Generate launcher icons from Icon.png' \
 		'make clean                   Remove Gradle build output' \
 		'make install ADB_SERIAL=ID   Select a device when multiple are connected'
@@ -42,6 +44,12 @@ help:
 debug:
 	$(GRADLEW) assembleDebug
 	@printf 'Debug APK: %s\n' '$(DEBUG_APK)'
+
+lint:
+	$(GRADLEW) ktlintCheck lintDebug
+
+format:
+	$(GRADLEW) ktlintFormat
 
 devices:
 	@test -x '$(ADB)' || { printf 'ADB not found at %s\n' '$(ADB)' >&2; exit 1; }
@@ -106,28 +114,7 @@ icon:
 		-filter Lanczos -resize '260x260!' \
 		-background none -gravity center -extent '432x432' -strip \
 		'$(ICON_ARTWORK)'
-	@for spec in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do \
-		density="$${spec%%:*}"; \
-		size="$${spec##*:}"; \
-		edge="$$((size - 1))"; \
-		radius="$$((size * 11 / 50))"; \
-		center="$$((size / 2))"; \
-		directory="app/src/main/res/mipmap-$$density"; \
-		mkdir -p "$$directory"; \
-		'$(IMAGE_MAGICK)' 'Icon.png' \
-			-filter Lanczos -resize "$${size}x$${size}!" \
-			\( +clone -alpha transparent -fill white \
-			-draw "roundrectangle 0,0,$$edge,$$edge,$$radius,$$radius" \) \
-			-compose DstIn -composite -compose Over -strip -quality 92 \
-			"$$directory/ic_launcher.webp"; \
-		'$(IMAGE_MAGICK)' 'Icon.png' \
-			-filter Lanczos -resize "$${size}x$${size}!" \
-			\( +clone -alpha transparent -fill white \
-			-draw "circle $$center,$$center $$center,0" \) \
-			-compose DstIn -composite -compose Over -strip -quality 92 \
-			"$$directory/ic_launcher_round.webp"; \
-	done
-	@printf 'Generated Android launcher icons from Icon.png\n'
+	@printf 'Generated adaptive launcher icon artwork from Icon.png\n'
 
 clean:
 	$(GRADLEW) clean

@@ -11,11 +11,12 @@ import org.junit.Test
 class NdiUiStateSettingsTest {
     @Test
     fun `developer mode adds example source without changing discovered sources`() {
-        val state = NdiUiState(
-            isInitialized = true,
-            hasCompletedRefresh = true,
-            settings = AppSettings(developerMode = true)
-        )
+        val state =
+            NdiUiState(
+                isInitialized = true,
+                hasCompletedRefresh = true,
+                settings = AppSettings(developerMode = true),
+            )
 
         assertTrue(state.sources.isEmpty())
         assertEquals(1, state.displayedSources.size)

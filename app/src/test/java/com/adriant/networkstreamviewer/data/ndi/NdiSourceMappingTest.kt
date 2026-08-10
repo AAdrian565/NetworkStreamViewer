@@ -9,17 +9,20 @@ import org.junit.Test
 class NdiSourceMappingTest {
     @Test
     fun mapsAlternatingNamesAndUrls() {
-        val rawSources = arrayOf(
-            "Studio (Camera 1)", "ndi://studio/camera-1",
-            "Laptop (Screen)", "ndi://laptop/screen"
-        )
+        val rawSources =
+            arrayOf(
+                "Studio (Camera 1)",
+                "ndi://studio/camera-1",
+                "Laptop (Screen)",
+                "ndi://laptop/screen",
+            )
 
         assertEquals(
             listOf(
                 NdiSource("Studio (Camera 1)", "ndi://studio/camera-1"),
-                NdiSource("Laptop (Screen)", "ndi://laptop/screen")
+                NdiSource("Laptop (Screen)", "ndi://laptop/screen"),
             ),
-            rawSources.toNdiSources()
+            rawSources.toNdiSources(),
         )
     }
 
@@ -32,7 +35,7 @@ class NdiSourceMappingTest {
     fun mapsHxStreamDetails() {
         assertEquals(
             NdiStreamDetails(1920, 1080, 60_000, 1_001, NdiVideoFormat.HX_H264),
-            intArrayOf(1920, 1080, 60_000, 1_001, 1).toStreamDetails()
+            intArrayOf(1920, 1080, 60_000, 1_001, 1).toStreamDetails(),
         )
     }
 

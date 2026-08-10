@@ -6,7 +6,7 @@ data class NdiAudioLevels(
     val leftRmsDbfs: Float = -60f,
     val rightRmsDbfs: Float = -60f,
     val leftClipped: Boolean = false,
-    val rightClipped: Boolean = false
+    val rightClipped: Boolean = false,
 ) {
     companion object {
         val FLOOR = NdiAudioLevels()

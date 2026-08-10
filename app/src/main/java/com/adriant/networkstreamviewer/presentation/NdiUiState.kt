@@ -16,18 +16,19 @@ data class NdiUiState(
     val areDeveloperOptionsUnlocked: Boolean = false,
     val update: UpdateUiState = UpdateUiState(),
     val settings: AppSettings = AppSettings(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 ) {
     val displayedSources: List<NdiSource>
         get() = if (settings.developerMode) sources + developerExampleSource else sources
 
     val statusMessage: String
-        get() = when {
-            errorMessage != null -> errorMessage
-            isRefreshing -> "Searching for NDI® sources…"
-            !isInitialized -> "Waiting to start discovery…"
-            hasCompletedRefresh && displayedSources.isEmpty() ->
-                "No streams found. Pull down to refresh."
-            else -> "${displayedSources.size} source${if (displayedSources.size == 1) "" else "s"} found"
-        }
+        get() =
+            when {
+                errorMessage != null -> errorMessage
+                isRefreshing -> "Searching for NDI® sources…"
+                !isInitialized -> "Waiting to start discovery…"
+                hasCompletedRefresh && displayedSources.isEmpty() ->
+                    "No streams found. Pull down to refresh."
+                else -> "${displayedSources.size} source${if (displayedSources.size == 1) "" else "s"} found"
+            }
 }

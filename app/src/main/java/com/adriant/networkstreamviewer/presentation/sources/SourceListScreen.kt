@@ -2,11 +2,11 @@ package com.adriant.networkstreamviewer.presentation.sources
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,7 +23,6 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -52,24 +51,25 @@ fun SourceListScreen(
     onRequestPermission: () -> Unit,
     onOpenCameraSender: () -> Unit,
     onOpenSettings: () -> Unit,
-    onSourceSelected: (NdiSource) -> Unit
+    onSourceSelected: (NdiSource) -> Unit,
 ) {
     Scaffold { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text("Network streams", style = MaterialTheme.typography.headlineMedium)
                 IconButton(
                     onClick = onOpenSettings,
-                    modifier = Modifier.semantics { contentDescription = "Settings" }
+                    modifier = Modifier.semantics { contentDescription = "Settings" },
                 ) {
                     SettingsIcon()
                 }
@@ -79,17 +79,18 @@ fun SourceListScreen(
             Spacer(Modifier.height(12.dp))
             FilledTonalButton(
                 onClick = onOpenCameraSender,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Stream this camera to NDI®")
             }
             Spacer(Modifier.height(20.dp))
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                contentAlignment = Alignment.Center,
             ) {
                 if (!permissionGranted) {
                     PermissionCard(onRequestPermission)
@@ -97,11 +98,11 @@ fun SourceListScreen(
                     PullToRefreshBox(
                         isRefreshing = false,
                         onRefresh = { if (!isRefreshing) onRefresh() },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         SourceList(
                             sources = sources,
-                            onSourceSelected = onSourceSelected
+                            onSourceSelected = onSourceSelected,
                         )
                     }
                 }
@@ -114,7 +115,9 @@ fun SourceListScreen(
 private fun SettingsIcon() {
     val color = LocalContentColor.current
     Canvas(modifier = Modifier.size(24.dp)) {
-        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+        val center =
+            androidx.compose.ui.geometry
+                .Offset(size.width / 2f, size.height / 2f)
         val strokeWidth = 2.dp.toPx()
         val innerRadius = size.minDimension * 0.16f
         val ringRadius = size.minDimension * 0.30f
@@ -127,15 +130,17 @@ private fun SettingsIcon() {
             val angle = index * PI.toFloat() / 4f
             drawLine(
                 color = color,
-                start = androidx.compose.ui.geometry.Offset(
-                    center.x + cos(angle) * spokeStart,
-                    center.y + sin(angle) * spokeStart
-                ),
-                end = androidx.compose.ui.geometry.Offset(
-                    center.x + cos(angle) * spokeEnd,
-                    center.y + sin(angle) * spokeEnd
-                ),
-                strokeWidth = strokeWidth
+                start =
+                    androidx.compose.ui.geometry.Offset(
+                        center.x + cos(angle) * spokeStart,
+                        center.y + sin(angle) * spokeStart,
+                    ),
+                end =
+                    androidx.compose.ui.geometry.Offset(
+                        center.x + cos(angle) * spokeEnd,
+                        center.y + sin(angle) * spokeEnd,
+                    ),
+                strokeWidth = strokeWidth,
             )
         }
     }
@@ -157,17 +162,18 @@ private fun PermissionCard(onRequestPermission: () -> Unit) {
 @Composable
 private fun SourceList(
     sources: List<NdiSource>,
-    onSourceSelected: (NdiSource) -> Unit
+    onSourceSelected: (NdiSource) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         if (sources.isEmpty()) {
             item {
                 Column(
-                    modifier = Modifier
-                        .fillParentMaxSize()
-                        .padding(24.dp),
+                    modifier =
+                        Modifier
+                            .fillParentMaxSize()
+                            .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     Text("No streams found", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -177,21 +183,23 @@ private fun SourceList(
         }
         items(sources, key = { "${it.name}|${it.url}" }) { source ->
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSourceSelected(source) }
-                    .padding(vertical = 18.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onSourceSelected(source) }
+                        .padding(vertical = 18.dp),
             ) {
                 Text(source.name, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = when {
-                        source.details != null -> source.details.subtitle()
-                        source.isLoadingDetails -> "Loading stream details…"
-                        else -> "Stream details unavailable"
-                    },
+                    text =
+                        when {
+                            source.details != null -> source.details.subtitle()
+                            source.isLoadingDetails -> "Loading stream details…"
+                            else -> "Stream details unavailable"
+                        },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider()
@@ -202,15 +210,17 @@ private fun SourceList(
 private fun NdiStreamDetails.subtitle(): String {
     val framesPerSecond = frameRateNumerator.toDouble() / frameRateDenominator
     val roundedFramesPerSecond = framesPerSecond.roundToInt()
-    val frameRateText = if (abs(framesPerSecond - roundedFramesPerSecond) < 0.005) {
-        roundedFramesPerSecond.toString()
-    } else {
-        String.format(Locale.US, "%.2f", framesPerSecond)
-    }
-    val formatText = when (format) {
-        NdiVideoFormat.FULL_NDI -> "Full NDI"
-        NdiVideoFormat.HX_H264 -> "NDI HX (H.264)"
-        NdiVideoFormat.HX_HEVC -> "NDI HX (HEVC)"
-    }
-    return "${width}×$height • $frameRateText fps • $formatText"
+    val frameRateText =
+        if (abs(framesPerSecond - roundedFramesPerSecond) < 0.005) {
+            roundedFramesPerSecond.toString()
+        } else {
+            String.format(Locale.US, "%.2f", framesPerSecond)
+        }
+    val formatText =
+        when (format) {
+            NdiVideoFormat.FULL_NDI -> "Full NDI"
+            NdiVideoFormat.HX_H264 -> "NDI HX (H.264)"
+            NdiVideoFormat.HX_HEVC -> "NDI HX (HEVC)"
+        }
+    return "$width×$height • $frameRateText fps • $formatText"
 }

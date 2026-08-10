@@ -1,6 +1,6 @@
 # Network Stream Viewer
 
-A vibe coded android 17 Jetpack Compose application that discovers NDI sources on the local network, renders a selected video stream, and publishes the device camera through the native NDI Android SDK.
+An Android 17 Jetpack Compose application that discovers NDI sources on the local network, renders selected video streams, and publishes the device camera through the native NDI Android SDK.
 
 The camera sender publishes up to 1080p video with selectable lens, resolution, and frame rate. Choose its advertised stream name before starting; stop it to change settings or rename and restart. Camera publishing remains video-only. The player supports synchronized NDI audio playback, mute/volume control, and stereo peak/RMS metering.
 
@@ -8,7 +8,7 @@ The camera sender publishes up to 1080p video with selectable lens, resolution, 
 
 The app uses a small layered architecture:
 
-- `domain/` contains the `NdiSource` model and repository contract.
+- `domain/` contains application models and repository contracts.
 - `data/ndi/` owns the licensed SDK boundary, JNI declarations, repository implementation, and player controller.
 - `data/camera/` owns Camera2 capture, NV12 conversion, and sender lifecycle.
 - `presentation/` contains lifecycle state, permissions, and separate source-list, player, and camera-sender screens.
@@ -35,6 +35,18 @@ The NDI SDK directory must contain `include/Processing.NDI.Lib.h` and ABI-specif
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+## Code quality
+
+The project uses [ktlint](https://pinterest.github.io/ktlint/) for Kotlin formatting and Android Lint for platform-specific analysis. Both checks fail the build on violations.
+
+```bash
+make lint                    # Run ktlint and Android Lint
+make format                  # Apply safe ktlint formatting fixes
+./gradlew testDebugUnitTest  # Run local unit tests
+```
+
+Formatting rules live in `.editorconfig`; Android Lint policy is configured in `app/build.gradle.kts`.
+
 Convenience targets are also available:
 
 ```bash
@@ -44,6 +56,8 @@ make install ADB_SERIAL=ID    # Select a device when several are connected
 make install-release           # Build, install, and open the signed release app
 make install BUILD_TYPE=release # Equivalent to make install-release
 make release                  # Build the release APK
+make lint                     # Run Kotlin and Android lint checks
+make format                   # Format Kotlin sources and build scripts
 ```
 
 The version is controlled in `gradle.properties` with `VERSION_NAME` (SemVer) and `VERSION_CODE` (an increasing integer). Update both values before building a release.

@@ -1,24 +1,27 @@
-import java.util.Properties
-
 import com.android.build.api.variant.ApplicationVariant
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
 }
 
-val localProperties = Properties().apply {
-    rootProject.file("local.properties").inputStream().use { load(it) }
-}
-val ndiSdkDir = localProperties.getProperty("ndi.sdk.dir")
-    ?: error("Add ndi.sdk.dir=/path/to/NDI SDK for Android to local.properties")
-
-val localSigningProperties = Properties().apply {
-    val signingFile = rootProject.file("gradle/gradle.properties")
-    if (signingFile.isFile) {
-        signingFile.inputStream().use { load(it) }
+val localProperties =
+    Properties().apply {
+        rootProject.file("local.properties").inputStream().use { load(it) }
     }
-}
+val ndiSdkDir =
+    localProperties.getProperty("ndi.sdk.dir")
+        ?: error("Add ndi.sdk.dir=/path/to/NDI SDK for Android to local.properties")
+
+val localSigningProperties =
+    Properties().apply {
+        val signingFile = rootProject.file("gradle/gradle.properties")
+        if (signingFile.isFile) {
+            signingFile.inputStream().use { load(it) }
+        }
+    }
 
 fun signingProperty(name: String): String? =
     localSigningProperties.getProperty(name)
@@ -28,12 +31,13 @@ val releaseStoreFile = signingProperty("NETWORKSTREAMVIEWER_STORE_FILE")
 val releaseStorePassword = signingProperty("NETWORKSTREAMVIEWER_STORE_PASSWORD")
 val releaseKeyAlias = signingProperty("NETWORKSTREAMVIEWER_KEY_ALIAS")
 val releaseKeyPassword = signingProperty("NETWORKSTREAMVIEWER_KEY_PASSWORD")
-val hasReleaseSigning = listOf(
-    releaseStoreFile,
-    releaseStorePassword,
-    releaseKeyAlias,
-    releaseKeyPassword,
-).all { !it.isNullOrBlank() }
+val hasReleaseSigning =
+    listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
 
 if (!hasReleaseSigning && gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
     error(
@@ -53,11 +57,15 @@ android {
         applicationId = "com.adriant.networkstreamviewer"
         minSdk = 26
         targetSdk = 37
-        versionCode = providers.gradleProperty("VERSION_CODE")
-            .map(String::toInt)
-            .getOrElse(1)
-        versionName = providers.gradleProperty("VERSION_NAME")
-            .getOrElse("0.1.0")
+        versionCode =
+            providers
+                .gradleProperty("VERSION_CODE")
+                .map(String::toInt)
+                .getOrElse(1)
+        versionName =
+            providers
+                .gradleProperty("VERSION_NAME")
+                .getOrElse("0.1.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -110,6 +118,26 @@ android {
     }
     sourceSets {
         getByName("main").jniLibs.directories.add("$ndiSdkDir/lib")
+    }
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = true
+        warningsAsErrors = true
+        disable +=
+            setOf(
+                "AndroidGradlePluginVersion",
+                "GradleDependency",
+                "NewerVersionAvailable",
+            )
+    }
+}
+
+ktlint {
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+    filter {
+        exclude("**/generated/**")
     }
 }
 

@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
             NetworkStreamViewerTheme(appTheme = settings.theme) {
                 NdiApp(
                     settingsRepository = settingsRepository,
-                    updateRepository = updateRepository
+                    updateRepository = updateRepository,
                 )
             }
         }

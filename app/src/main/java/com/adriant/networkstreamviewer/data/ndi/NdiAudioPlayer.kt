@@ -20,15 +20,25 @@ class NdiAudioPlayer(
     private val onLevelsChanged: (NdiAudioLevels) -> Unit = {},
     private val onDiagnosticsChanged: (NdiAudioDiagnostics) -> Unit = {},
     private val nativeAudio: NativeAudioSource = NativeAudioSource.Native,
-    private val clock: Clock = Clock { System.nanoTime() / NANOS_PER_MILLISECOND }
+    private val clock: Clock = Clock { System.nanoTime() / NANOS_PER_MILLISECOND },
 ) {
     interface NativeAudioSource {
-        fun fillAudioBuffer(buffer: ByteBuffer, sampleRate: Int, channelCount: Int, samplesPerChannel: Int): Long
+        fun fillAudioBuffer(
+            buffer: ByteBuffer,
+            sampleRate: Int,
+            channelCount: Int,
+            samplesPerChannel: Int,
+        ): Long
+
         fun getAudioPerformance(): LongArray
 
         object Native : NativeAudioSource {
-            override fun fillAudioBuffer(buffer: ByteBuffer, sampleRate: Int, channelCount: Int, samplesPerChannel: Int) =
-                NdiNative.fillAudioBuffer(buffer, sampleRate, channelCount, samplesPerChannel)
+            override fun fillAudioBuffer(
+                buffer: ByteBuffer,
+                sampleRate: Int,
+                channelCount: Int,
+                samplesPerChannel: Int,
+            ) = NdiNative.fillAudioBuffer(buffer, sampleRate, channelCount, samplesPerChannel)
 
             override fun getAudioPerformance(): LongArray = NdiNative.getAudioPerformance()
         }
@@ -91,9 +101,10 @@ class NdiAudioPlayer(
             meter.reset()
             publishStatusLocked()
             publishLevels(NdiAudioLevels.FLOOR)
-            writer = Thread({ writerLoop(generation) }, "NdiAudioWriter").also {
-                it.start()
-            }
+            writer =
+                Thread({ writerLoop(generation) }, "NdiAudioWriter").also {
+                    it.start()
+                }
         }
     }
 
@@ -177,11 +188,12 @@ class NdiAudioPlayer(
                 }
 
                 buffer.clear()
-                val frameCount = try {
-                    nativeAudio.fillAudioBuffer(buffer, SAMPLE_RATE, CHANNEL_COUNT, SAMPLES_PER_PULL)
-                } catch (_: Exception) {
-                    INVALID_CAPTURE
-                }
+                val frameCount =
+                    try {
+                        nativeAudio.fillAudioBuffer(buffer, SAMPLE_RATE, CHANNEL_COUNT, SAMPLES_PER_PULL)
+                    } catch (_: Exception) {
+                        INVALID_CAPTURE
+                    }
                 if (frameCount == INVALID_CAPTURE) {
                     synchronized(lock) { reportOutputFailureLocked() }
                     break
@@ -193,7 +205,15 @@ class NdiAudioPlayer(
                     }
                     lastFrameCount = frameCount
                 }
-                if (clock.nowMillis() - lastProgressAt >= if (lastFrameCount == Long.MIN_VALUE || lastFrameCount == 0L) NO_SIGNAL_START_MS else NO_SIGNAL_STALL_MS) {
+                if (clock.nowMillis() - lastProgressAt >=
+                    if (lastFrameCount == Long.MIN_VALUE ||
+                        lastFrameCount == 0L
+                    ) {
+                        NO_SIGNAL_START_MS
+                    } else {
+                        NO_SIGNAL_STALL_MS
+                    }
+                ) {
                     synchronized(lock) {
                         publishStatusLocked(NdiAudioStatus.NO_SIGNAL)
                         publishLevels(meter.reset())
@@ -203,11 +223,12 @@ class NdiAudioPlayer(
                 buffer.position(0)
                 buffer.limit(pullBytes)
                 while (buffer.hasRemaining() && isRunning(loopGeneration)) {
-                    val written = try {
-                        track?.write(buffer, buffer.remaining(), AudioTrack.WRITE_BLOCKING) ?: ERROR_OUTPUT
-                    } catch (_: Exception) {
-                        ERROR_OUTPUT
-                    }
+                    val written =
+                        try {
+                            track?.write(buffer, buffer.remaining(), AudioTrack.WRITE_BLOCKING) ?: ERROR_OUTPUT
+                        } catch (_: Exception) {
+                            ERROR_OUTPUT
+                        }
                     if (written <= 0) {
                         synchronized(lock) { reportOutputFailureLocked() }
                         break
@@ -221,7 +242,12 @@ class NdiAudioPlayer(
 
                 val now = clock.nowMillis()
                 if (now - lastStatsAt >= STATS_INTERVAL_MS) {
-                    val stats = try { nativeAudio.getAudioPerformance() } catch (_: Exception) { LongArray(0) }
+                    val stats =
+                        try {
+                            nativeAudio.getAudioPerformance()
+                        } catch (_: Exception) {
+                            LongArray(0)
+                        }
                     if (stats.size >= 2) {
                         totalFrames = stats[0]
                         droppedFrames = stats[1]
@@ -252,48 +278,65 @@ class NdiAudioPlayer(
     }
 
     private fun createTrack(): AudioTrack? {
-        val attributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-            .build()
-        val format = AudioFormat.Builder()
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setSampleRate(SAMPLE_RATE)
-            .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
-            .build()
-        val minimum = AudioTrack.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT)
+        val attributes =
+            AudioAttributes
+                .Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                .build()
+        val format =
+            AudioFormat
+                .Builder()
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(SAMPLE_RATE)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                .build()
+        val minimum =
+            AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_STEREO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
         if (minimum <= 0) return null
         val bufferSize = max(minimum, SAMPLES_PER_PULL * CHANNEL_COUNT * BYTES_PER_SAMPLE * 4)
-        fun build(lowLatency: Boolean): AudioTrack? = try {
-            val candidate = AudioTrack.Builder()
-                .setAudioAttributes(attributes)
-                .setAudioFormat(format)
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .setBufferSizeInBytes(bufferSize)
-                .apply { if (lowLatency) setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) }
-                .build()
-            if (candidate.state == AudioTrack.STATE_INITIALIZED) candidate else {
-                candidate.release()
+
+        fun build(lowLatency: Boolean): AudioTrack? =
+            try {
+                val candidate =
+                    AudioTrack
+                        .Builder()
+                        .setAudioAttributes(attributes)
+                        .setAudioFormat(format)
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .setBufferSizeInBytes(bufferSize)
+                        .apply { if (lowLatency) setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) }
+                        .build()
+                if (candidate.state == AudioTrack.STATE_INITIALIZED) {
+                    candidate
+                } else {
+                    candidate.release()
+                    null
+                }
+            } catch (_: Exception) {
                 null
             }
-        } catch (_: Exception) {
-            null
-        }
         return build(true) ?: build(false)
     }
 
     private fun requestFocusLocked(): Boolean {
         if (permanentFocusLoss || focusGranted) return focusGranted
-        val request = focusRequest ?: AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                    .build()
-            )
-            .setOnAudioFocusChangeListener { change -> onFocusChanged(change) }
-            .build()
-            .also { focusRequest = it }
+        val request =
+            focusRequest ?: AudioFocusRequest
+                .Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setAudioAttributes(
+                    AudioAttributes
+                        .Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                        .build(),
+                ).setOnAudioFocusChangeListener { change -> onFocusChanged(change) }
+                .build()
+                .also { focusRequest = it }
         focusGranted = audioManager.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         if (focusGranted) {
             transientFocusPause = false
@@ -341,17 +384,30 @@ class NdiAudioPlayer(
 
     private fun applyVolumeLocked() {
         val gain = if (muted || !focusGranted) 0f else userVolume * duckMultiplier
-        try { track?.setVolume(gain) } catch (_: Exception) { }
+        try {
+            track?.setVolume(gain)
+        } catch (_: Exception) {
+        }
     }
 
     private fun abandonFocusLocked() {
-        focusRequest?.let { try { audioManager.abandonAudioFocusRequest(it) } catch (_: Exception) { } }
+        focusRequest?.let {
+            try {
+                audioManager.abandonAudioFocusRequest(it)
+            } catch (_: Exception) {
+            }
+        }
         focusRequest = null
         duckMultiplier = 1f
     }
 
     private fun releaseTrackLocked() {
-        track?.let { try { it.release() } catch (_: Exception) { } }
+        track?.let {
+            try {
+                it.release()
+            } catch (_: Exception) {
+            }
+        }
         track = null
     }
 
@@ -362,9 +418,10 @@ class NdiAudioPlayer(
         lock.notifyAll()
     }
 
-    private fun isRunning(loopGeneration: Long): Boolean = synchronized(lock) {
-        running && generation == loopGeneration
-    }
+    private fun isRunning(loopGeneration: Long): Boolean =
+        synchronized(lock) {
+            running && generation == loopGeneration
+        }
 
     private fun publishStatusLocked(value: NdiAudioStatus = status) {
         status = value
@@ -376,7 +433,11 @@ class NdiAudioPlayer(
         onLevelsChanged(value)
     }
 
-    private fun publishDiagnosticsLocked(total: Long, dropped: Long, underruns: Int) {
+    private fun publishDiagnosticsLocked(
+        total: Long,
+        dropped: Long,
+        underruns: Int,
+    ) {
         onDiagnosticsChanged(NdiAudioDiagnostics(status, SAMPLE_RATE, CHANNEL_COUNT, total, dropped, underruns))
     }
 

@@ -5,5 +5,5 @@ enum class NdiAudioStatus {
     PLAYING,
     NO_SIGNAL,
     FOCUS_LOST,
-    OUTPUT_FAILURE
+    OUTPUT_FAILURE,
 }

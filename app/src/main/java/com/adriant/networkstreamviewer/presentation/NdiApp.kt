@@ -7,25 +7,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
-import com.adriant.networkstreamviewer.domain.repository.UpdateRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adriant.networkstreamviewer.data.ndi.NdiPlayerController
+import com.adriant.networkstreamviewer.data.settings.AppSettingsRepository
+import com.adriant.networkstreamviewer.domain.repository.UpdateRepository
 import com.adriant.networkstreamviewer.presentation.camera.CameraSenderScreen
 import com.adriant.networkstreamviewer.presentation.player.PlayerScreen
-import com.adriant.networkstreamviewer.presentation.sources.SourceListScreen
 import com.adriant.networkstreamviewer.presentation.settings.AboutScreen
 import com.adriant.networkstreamviewer.presentation.settings.SettingsScreen
+import com.adriant.networkstreamviewer.presentation.sources.SourceListScreen
 import kotlinx.coroutines.delay
 
 @Composable
 fun NdiApp(
     settingsRepository: AppSettingsRepository,
     updateRepository: UpdateRepository,
-    viewModel: NdiViewModel = viewModel(
-        factory = NdiViewModel.Factory(settingsRepository, updateRepository)
-    )
+    viewModel: NdiViewModel =
+        viewModel(
+            factory = NdiViewModel.Factory(settingsRepository, updateRepository),
+        ),
 ) {
     val permission = rememberLocalNetworkPermissionState()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -49,7 +50,7 @@ fun NdiApp(
         uiState.isSettingsOpen,
         uiState.isCameraSenderOpen,
         selectedSource,
-        uiState.settings.discoveryRefreshInterval
+        uiState.settings.discoveryRefreshInterval,
     ) {
         val intervalMillis = uiState.settings.discoveryRefreshInterval.intervalMillis
         if (permission.isGranted &&
@@ -73,11 +74,10 @@ fun NdiApp(
             defaultBandwidth = uiState.settings.defaultBandwidth,
             keepScreenAwake = uiState.settings.keepScreenAwake,
             showDiagnostics = uiState.settings.showPlaybackDiagnostics,
-            onBack = viewModel::clearSelectedSource
+            onBack = viewModel::clearSelectedSource,
         )
         return
     }
-
 
     if (uiState.isAboutOpen) {
         BackHandler(onBack = viewModel::closeAbout)
@@ -87,7 +87,7 @@ fun NdiApp(
             onUnlockDeveloperOptions = viewModel::unlockDeveloperOptions,
             onCheckForUpdates = viewModel::checkForUpdates,
             onDownloadUpdate = viewModel::downloadUpdate,
-            onBack = viewModel::closeAbout
+            onBack = viewModel::closeAbout,
         )
         return
     }
@@ -108,7 +108,7 @@ fun NdiApp(
             onDeveloperModeChanged = viewModel::setDeveloperMode,
             onDiscoveryRefreshIntervalChanged = viewModel::setDiscoveryRefreshInterval,
             onOpenAbout = viewModel::openAbout,
-            onBack = closeSettings
+            onBack = closeSettings,
         )
         return
     }
@@ -122,24 +122,25 @@ fun NdiApp(
         CameraSenderScreen(
             localNetworkPermissionGranted = permission.isGranted,
             onRequestLocalNetworkPermission = permission.request,
-            onBack = closeCameraSender
+            onBack = closeCameraSender,
         )
         return
     }
 
     SourceListScreen(
         sources = uiState.displayedSources,
-        status = if (permission.isGranted) {
-            uiState.statusMessage
-        } else {
-            "Local-network access is required to find NDI® sources."
-        },
+        status =
+            if (permission.isGranted) {
+                uiState.statusMessage
+            } else {
+                "Local-network access is required to find NDI® sources."
+            },
         permissionGranted = permission.isGranted,
         isRefreshing = uiState.isRefreshing,
         onRefresh = viewModel::refreshSources,
         onRequestPermission = permission.request,
         onOpenCameraSender = viewModel::openCameraSender,
         onOpenSettings = viewModel::openSettings,
-        onSourceSelected = viewModel::selectSource
+        onSourceSelected = viewModel::selectSource,
     )
 }

@@ -9,12 +9,12 @@ enum class UpdateStatus {
     AVAILABLE,
     DOWNLOADING,
     READY,
-    ERROR
+    ERROR,
 }
 
 data class UpdateUiState(
     val status: UpdateStatus = UpdateStatus.IDLE,
     val update: AppUpdate? = null,
     val downloadedApkPath: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )

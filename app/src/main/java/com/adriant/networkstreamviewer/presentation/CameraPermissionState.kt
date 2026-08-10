@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 
 internal class CameraPermissionState(
     val isGranted: Boolean,
-    val request: () -> Unit
+    val request: () -> Unit,
 )
 
 @Composable
@@ -21,15 +21,16 @@ internal fun rememberCameraPermissionState(): CameraPermissionState {
     val context = LocalContext.current
     var isGranted by remember {
         mutableStateOf(
-            context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
         )
     }
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> isGranted = granted }
+    val launcher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted -> isGranted = granted }
 
     return CameraPermissionState(
         isGranted = isGranted,
-        request = { launcher.launch(Manifest.permission.CAMERA) }
+        request = { launcher.launch(Manifest.permission.CAMERA) },
     )
 }

@@ -46,109 +46,117 @@ internal fun PlaybackControlPanel(
     onShowAudioDbLabelsChanged: (Boolean) -> Unit,
     onRetryAudioFocus: () -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (!isVisible) return
     var selectedTab by remember { mutableStateOf(PlaybackTab.VIDEO) }
 
     Column(
-        modifier = modifier
-            .width(320.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xE60B0D10), RoundedCornerShape(10.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .semantics { contentDescription = "Playback control panel" },
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier =
+            modifier
+                .width(320.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xE60B0D10), RoundedCornerShape(10.dp))
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .semantics { contentDescription = "Playback control panel" },
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("▣", color = Color(0xFF00E5F0))
             Text(
                 "PLAYBACK",
                 color = Color(0xFF00E5F0),
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp),
             )
             SmallFloatingActionButton(
                 onClick = onClose,
-                modifier = Modifier
-                    .size(36.dp)
-                    .semantics { contentDescription = "Hide playback controls" }
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .semantics { contentDescription = "Hide playback controls" },
             ) {
                 Text("AV", style = MaterialTheme.typography.labelSmall)
             }
         }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(34.dp)
-                .background(Color(0xFF17191D), RoundedCornerShape(7.dp))
-                .padding(1.dp),
-            horizontalArrangement = Arrangement.spacedBy(1.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(34.dp)
+                    .background(Color(0xFF17191D), RoundedCornerShape(7.dp))
+                    .padding(1.dp),
+            horizontalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             PlaybackTabButton(
                 label = "Video",
                 selected = selectedTab == PlaybackTab.VIDEO,
                 onClick = { selectedTab = PlaybackTab.VIDEO },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             PlaybackTabButton(
                 label = "Audio",
                 selected = selectedTab == PlaybackTab.AUDIO,
                 onClick = { selectedTab = PlaybackTab.AUDIO },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
 
         when (selectedTab) {
-            PlaybackTab.VIDEO -> Column {
-                NdiBandwidth.entries.forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onBandwidthChanged(option) }
-                            .semantics { contentDescription = "Video quality: ${option.label}" }
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = bandwidth == option,
-                            onClick = { onBandwidthChanged(option) }
-                        )
-                        Text(option.label, color = Color.White)
+            PlaybackTab.VIDEO ->
+                Column {
+                    NdiBandwidth.entries.forEach { option ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onBandwidthChanged(option) }
+                                    .semantics { contentDescription = "Video quality: ${option.label}" }
+                                    .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = bandwidth == option,
+                                onClick = { onBandwidthChanged(option) },
+                            )
+                            Text(option.label, color = Color.White)
+                        }
                     }
                 }
-            }
-            PlaybackTab.AUDIO -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AudioControls(
-                    status = audioStatus,
-                    volume = audioVolume,
-                    muted = audioMuted,
-                    onMutedChanged = onAudioMutedChanged,
-                    onVolumeChanged = onAudioVolumeChanged,
-                    onRetryFocus = onRetryAudioFocus
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { contentDescription = "Show audio dB labels" },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Show level numbers",
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
+            PlaybackTab.AUDIO ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AudioControls(
+                        status = audioStatus,
+                        volume = audioVolume,
+                        muted = audioMuted,
+                        onMutedChanged = onAudioMutedChanged,
+                        onVolumeChanged = onAudioVolumeChanged,
+                        onRetryFocus = onRetryAudioFocus,
                     )
-                    Switch(
-                        checked = showAudioDbLabels,
-                        onCheckedChange = onShowAudioDbLabelsChanged
-                    )
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = "Show audio dB labels" },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Show level numbers",
+                            color = Color.White,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = showAudioDbLabels,
+                            onCheckedChange = onShowAudioDbLabelsChanged,
+                        )
+                    }
                 }
-            }
         }
     }
 }
@@ -158,25 +166,25 @@ private fun PlaybackTabButton(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = label,
         color = if (selected) Color(0xFF00E5F0) else Color.White.copy(alpha = 0.68f),
         textAlign = TextAlign.Center,
         style = MaterialTheme.typography.labelMedium,
-        modifier = modifier
-            .background(
-                if (selected) Color(0x3319E7F2) else Color.Transparent,
-                RoundedCornerShape(5.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 7.dp)
-            .semantics { contentDescription = "$label playback tab" }
+        modifier =
+            modifier
+                .background(
+                    if (selected) Color(0x3319E7F2) else Color.Transparent,
+                    RoundedCornerShape(5.dp),
+                ).clickable(onClick = onClick)
+                .padding(vertical = 7.dp)
+                .semantics { contentDescription = "$label playback tab" },
     )
 }
 
 private enum class PlaybackTab {
     VIDEO,
-    AUDIO
+    AUDIO,
 }

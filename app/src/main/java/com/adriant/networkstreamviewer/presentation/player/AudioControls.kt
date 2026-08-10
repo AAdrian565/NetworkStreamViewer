@@ -24,7 +24,7 @@ internal fun AudioControls(
     onMutedChanged: (Boolean) -> Unit,
     onVolumeChanged: (Float) -> Unit,
     onRetryFocus: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -37,9 +37,10 @@ internal fun AudioControls(
                         onMutedChanged(!muted)
                     }
                 },
-                modifier = Modifier.semantics {
-                    contentDescription = if (muted) "Unmute audio" else "Mute audio"
-                }
+                modifier =
+                    Modifier.semantics {
+                        contentDescription = if (muted) "Unmute audio" else "Mute audio"
+                    },
             ) {
                 Text(if (muted) "🔇" else "🔊")
             }
@@ -47,22 +48,24 @@ internal fun AudioControls(
                 value = volume.coerceIn(0f, 1f),
                 onValueChange = onVolumeChanged,
                 valueRange = 0f..1f,
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { contentDescription = "Audio volume" }
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .semantics { contentDescription = "Audio volume" },
             )
         }
-        val message = when (status) {
-            NdiAudioStatus.NO_SIGNAL -> "No audio"
-            NdiAudioStatus.FOCUS_LOST -> "Audio focus lost — tap mute to retry"
-            NdiAudioStatus.OUTPUT_FAILURE -> "Audio output failed"
-            NdiAudioStatus.STARTING, NdiAudioStatus.PLAYING -> null
-        }
+        val message =
+            when (status) {
+                NdiAudioStatus.NO_SIGNAL -> "No audio"
+                NdiAudioStatus.FOCUS_LOST -> "Audio focus lost — tap mute to retry"
+                NdiAudioStatus.OUTPUT_FAILURE -> "Audio output failed"
+                NdiAudioStatus.STARTING, NdiAudioStatus.PLAYING -> null
+            }
         message?.let {
             Text(
                 text = it,
                 color = Color.White,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
     }

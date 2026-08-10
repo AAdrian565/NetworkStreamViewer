@@ -6,5 +6,5 @@ data class NdiAudioDiagnostics(
     val outputChannelCount: Int = 2,
     val totalFrames: Long = 0,
     val droppedFrames: Long = 0,
-    val underrunCount: Int = 0
+    val underrunCount: Int = 0,
 )

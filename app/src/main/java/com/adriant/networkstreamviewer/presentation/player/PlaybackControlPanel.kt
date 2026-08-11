@@ -82,7 +82,7 @@ internal fun PlaybackControlPanel(
                         .size(36.dp)
                         .semantics { contentDescription = "Hide playback controls" },
             ) {
-                Text("AV", style = MaterialTheme.typography.labelSmall)
+                PlaybackControlsIcon(Modifier.size(20.dp))
             }
         }
         Row(

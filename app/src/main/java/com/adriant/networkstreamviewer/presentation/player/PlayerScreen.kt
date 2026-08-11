@@ -210,7 +210,7 @@ fun PlayerScreen(
                             contentDescription = "Show playback controls"
                         },
                 ) {
-                    Text("AV")
+                    PlaybackControlsIcon(Modifier.size(24.dp))
                 }
                 if (isPtzSupported) {
                     Spacer(Modifier.size(8.dp))
@@ -221,7 +221,7 @@ fun PlayerScreen(
                                 contentDescription = "Show PTZ controls"
                             },
                     ) {
-                        Text("PTZ")
+                        PtzControlsIcon(Modifier.size(24.dp))
                     }
                 }
             }

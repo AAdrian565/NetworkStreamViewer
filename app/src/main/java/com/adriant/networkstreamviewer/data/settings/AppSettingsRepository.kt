@@ -47,7 +47,7 @@ class AppSettingsRepository(
 
     private fun SharedPreferences.toAppSettings() =
         AppSettings(
-            theme = enumValueOrDefault(getString(KEY_THEME, null), AppTheme.SYSTEM),
+            theme = enumValueOrDefault(getString(KEY_THEME, null), AppTheme.AMOLED),
             defaultBandwidth =
                 enumValueOrDefault(
                     getString(KEY_DEFAULT_BANDWIDTH, null),

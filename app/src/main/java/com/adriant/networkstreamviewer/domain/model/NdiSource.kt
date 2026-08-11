@@ -5,6 +5,8 @@ data class NdiSource(
     val url: String,
     val details: NdiStreamDetails? = null,
     val isLoadingDetails: Boolean = true,
+    val deviceDescription: String? = null,
+    val isOnline: Boolean = true,
 )
 
 const val DEVELOPER_SOURCE_URL = "dev://example-empty-stream"

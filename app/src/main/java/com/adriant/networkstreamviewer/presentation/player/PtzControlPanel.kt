@@ -76,7 +76,7 @@ internal fun PtzControlPanel(
                         .size(36.dp)
                         .semantics { contentDescription = "Hide PTZ controls" },
             ) {
-                Text("PTZ", style = MaterialTheme.typography.labelSmall)
+                PtzControlsIcon(Modifier.size(20.dp))
             }
         }
         Row(

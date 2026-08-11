@@ -14,44 +14,63 @@ import com.adriant.networkstreamviewer.domain.model.AppTheme
 
 private val DarkColorScheme =
     darkColorScheme(
-        primary = Purple80,
-        secondary = PurpleGrey80,
-        tertiary = Pink80,
+        primary = NdiDarkCyan,
+        onPrimary = Color(0xFF003640),
+        secondary = Color(0xFF9ED9E5),
+        onSecondary = Color(0xFF00363D),
+        background = NdiDarkBackground,
+        onBackground = Color(0xFFF4F5FA),
+        surface = NdiDarkSurface,
+        onSurface = Color(0xFFF4F5FA),
+        surfaceVariant = NdiDarkSource,
+        onSurfaceVariant = Color(0xFF9A9AA9),
+        outline = Color(0xFF686879),
+        outlineVariant = NdiDarkBorder,
+        surfaceContainerLowest = Color(0xFF06060D),
+        surfaceContainerLow = NdiDarkSurface,
+        surfaceContainer = Color(0xFF11111C),
+        surfaceContainerHigh = Color(0xFF171725),
+        surfaceContainerHighest = Color(0xFF1D1D2B),
     )
 
 private val LightColorScheme =
     lightColorScheme(
-        primary = Purple40,
-        secondary = PurpleGrey40,
-        tertiary = Pink40,
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-     */
+        primary = NdiLightCyan,
+        onPrimary = Color.White,
+        secondary = Color(0xFF3B6870),
+        onSecondary = Color.White,
+        background = NdiLightBackground,
+        onBackground = Color(0xFF171A20),
+        surface = NdiLightSurface,
+        onSurface = Color(0xFF171A20),
+        surfaceVariant = NdiLightSource,
+        onSurfaceVariant = Color(0xFF5E6570),
+        outline = Color(0xFF777E89),
+        outlineVariant = NdiLightBorder,
+        surfaceContainerLowest = Color.White,
+        surfaceContainerLow = Color(0xFFF2F4F7),
+        surfaceContainer = Color(0xFFEDF0F4),
+        surfaceContainerHigh = Color(0xFFE7EAF0),
+        surfaceContainerHighest = Color(0xFFE1E5EB),
     )
 
 private val AmoledColorScheme =
     DarkColorScheme.copy(
         background = Color.Black,
         surface = Color.Black,
+        surfaceVariant = Color(0xFF0B0B14),
         surfaceDim = Color.Black,
-        surfaceBright = Color(0xFF151515),
+        surfaceBright = Color(0xFF161622),
         surfaceContainerLowest = Color.Black,
-        surfaceContainerLow = Color(0xFF080808),
-        surfaceContainer = Color(0xFF0D0D0D),
-        surfaceContainerHigh = Color(0xFF121212),
-        surfaceContainerHighest = Color(0xFF181818),
+        surfaceContainerLow = Color(0xFF05050A),
+        surfaceContainer = Color(0xFF090910),
+        surfaceContainerHigh = Color(0xFF10101B),
+        surfaceContainerHighest = Color(0xFF161622),
     )
 
 @Composable
 fun NetworkStreamViewerTheme(
-    appTheme: AppTheme = AppTheme.SYSTEM,
-    // Dynamic color is available on Android 12+
+    appTheme: AppTheme = AppTheme.AMOLED,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {

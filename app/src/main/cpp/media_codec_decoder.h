@@ -19,6 +19,7 @@ public:
     MediaCodecDecoder& operator=(const MediaCodecDecoder&) = delete;
 
     DecodeResult submit(const NDIlib_video_frame_v2_t& frame);
+    int takeRenderedFrameCount();
     void reset();
 
 private:
@@ -34,6 +35,7 @@ private:
     bool drainOutput();
 
     ANativeWindow* window_;
+    int rendered_frame_count_ = 0;
     struct AMediaCodec* codec_ = nullptr;
     NDIlib_compressed_FourCC_type_e codec_type_ = NDIlib_compressed_FourCC_type_max;
     int width_ = 0;

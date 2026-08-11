@@ -91,6 +91,17 @@ internal object NdiNative {
 interface NdiPlaybackListener {
     fun onVideoAspectRatioChanged(aspectRatio: Float)
 
+    fun onVideoDiagnosticsChanged(
+        totalFrames: Long,
+        droppedFrames: Long,
+        width: Int,
+        height: Int,
+        queueDepth: Int,
+        receivedFps: Float,
+        renderedFps: Float,
+        processingTimeMs: Float,
+    )
+
     fun onPlaybackStateChanged(state: Int)
 
     fun onPtzSupportChanged(isSupported: Boolean)

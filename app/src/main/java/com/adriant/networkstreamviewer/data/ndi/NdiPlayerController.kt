@@ -11,6 +11,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import com.adriant.networkstreamviewer.domain.model.NdiVideoDiagnostics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +42,7 @@ class NdiPlayerController(
         surface: Surface,
         bandwidth: NdiBandwidth,
         onAspectRatioChanged: (Float) -> Unit,
+        onVideoDiagnosticsChanged: (NdiVideoDiagnostics) -> Unit = {},
         onPlaybackStateChanged: (NdiPlaybackState) -> Unit,
         onPtzSupportChanged: (Boolean) -> Unit,
         onStartFailed: () -> Unit,
@@ -66,6 +68,32 @@ class NdiPlayerController(
                                 override fun onVideoAspectRatioChanged(aspectRatio: Float) {
                                     if (operation == operationGeneration.get()) {
                                         onAspectRatioChanged(aspectRatio)
+                                    }
+                                }
+
+                                override fun onVideoDiagnosticsChanged(
+                                    totalFrames: Long,
+                                    droppedFrames: Long,
+                                    width: Int,
+                                    height: Int,
+                                    queueDepth: Int,
+                                    receivedFps: Float,
+                                    renderedFps: Float,
+                                    processingTimeMs: Float,
+                                ) {
+                                    if (operation == operationGeneration.get()) {
+                                        onVideoDiagnosticsChanged(
+                                            NdiVideoDiagnostics(
+                                                width = width,
+                                                height = height,
+                                                receivedFrames = totalFrames,
+                                                receivedFps = receivedFps,
+                                                renderedFps = renderedFps,
+                                                droppedFrames = droppedFrames,
+                                                queueDepth = queueDepth,
+                                                processingTimeMs = processingTimeMs,
+                                            ),
+                                        )
                                     }
                                 }
 

@@ -122,7 +122,14 @@ DecodeResult MediaCodecDecoder::submit(const NDIlib_video_frame_v2_t& frame) {
     return drainOutput() ? DecodeResult::Submitted : DecodeResult::DecoderFailure;
 }
 
+int MediaCodecDecoder::takeRenderedFrameCount() {
+    const int rendered_frames = rendered_frame_count_;
+    rendered_frame_count_ = 0;
+    return rendered_frames;
+}
+
 void MediaCodecDecoder::reset() {
+    rendered_frame_count_ = 0;
     if (codec_ != nullptr) {
         AMediaCodec_stop(codec_);
         AMediaCodec_delete(codec_);
@@ -206,15 +213,17 @@ bool MediaCodecDecoder::drainOutput() {
         AMediaCodecBufferInfo info{};
         const ssize_t output_index = AMediaCodec_dequeueOutputBuffer(codec_, &info, 0);
         if (output_index >= 0) {
+            const bool should_render = info.size > 0;
             if (AMediaCodec_releaseOutputBuffer(
                     codec_,
                     static_cast<size_t>(output_index),
-                    info.size > 0
+                    should_render
                 ) != AMEDIA_OK) {
                 log_error("Could not render an Android video decoder output buffer");
                 reset();
                 return false;
             }
+            if (should_render) rendered_frame_count_++;
             continue;
         }
         if (output_index == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED ||

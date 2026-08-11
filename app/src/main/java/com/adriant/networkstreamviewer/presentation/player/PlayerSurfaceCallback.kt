@@ -8,12 +8,14 @@ import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import com.adriant.networkstreamviewer.domain.model.NdiVideoDiagnostics
 
 internal fun playerSurfaceCallback(
     source: NdiSource,
     bandwidth: NdiBandwidth,
     playerController: NdiPlayerController,
     onAspectRatioChanged: (Float) -> Unit,
+    onVideoDiagnosticsChanged: (NdiVideoDiagnostics) -> Unit,
     onPlaybackStateChanged: (NdiPlaybackState) -> Unit,
     onPtzSupportChanged: (Boolean) -> Unit,
     initialAudioVolume: Float,
@@ -25,6 +27,7 @@ internal fun playerSurfaceCallback(
     override fun surfaceCreated(holder: SurfaceHolder) {
         onPlaybackStateChanged(NdiPlaybackState.CONNECTING)
         onPtzSupportChanged(false)
+        onVideoDiagnosticsChanged(NdiVideoDiagnostics())
         onAudioStatusChanged(NdiAudioStatus.STARTING)
         onAudioLevelsChanged(NdiAudioLevels.FLOOR)
         playerController.start(
@@ -32,6 +35,7 @@ internal fun playerSurfaceCallback(
             surface = holder.surface,
             bandwidth = bandwidth,
             onAspectRatioChanged = onAspectRatioChanged,
+            onVideoDiagnosticsChanged = onVideoDiagnosticsChanged,
             onPlaybackStateChanged = onPlaybackStateChanged,
             onPtzSupportChanged = onPtzSupportChanged,
             onStartFailed = { onPlaybackStateChanged(NdiPlaybackState.DECODER_FAILURE) },
@@ -54,6 +58,7 @@ internal fun playerSurfaceCallback(
         onPtzSupportChanged(false)
         onAudioStatusChanged(NdiAudioStatus.STARTING)
         onAudioLevelsChanged(NdiAudioLevels.FLOOR)
+        onVideoDiagnosticsChanged(NdiVideoDiagnostics())
         onAudioDiagnosticsChanged(NdiAudioDiagnostics())
         playerController.stopPtzMovement()
         playerController.stop()

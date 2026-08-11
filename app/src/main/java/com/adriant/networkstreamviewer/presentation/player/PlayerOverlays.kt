@@ -35,6 +35,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import com.adriant.networkstreamviewer.domain.model.NdiVideoDiagnostics
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
 import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
 import java.util.Locale
@@ -57,6 +58,7 @@ internal fun PlaybackDiagnostics(
     playbackState: NdiPlaybackState,
     isDeveloperExample: Boolean,
     modifier: Modifier = Modifier,
+    videoDiagnostics: NdiVideoDiagnostics = NdiVideoDiagnostics(),
     audioDiagnostics: NdiAudioDiagnostics = NdiAudioDiagnostics(),
 ) {
     val details = source.details
@@ -67,7 +69,12 @@ internal fun PlaybackDiagnostics(
             NdiVideoFormat.HX_HEVC -> "HEVC"
             null -> "Unknown"
         }
-    val resolution = details?.let { "${it.width}×${it.height}" } ?: "Unknown"
+    val resolution =
+        if (videoDiagnostics.width > 0 && videoDiagnostics.height > 0) {
+            "${videoDiagnostics.width}×${videoDiagnostics.height}"
+        } else {
+            details?.let { "${it.width}×${it.height}" } ?: "Unknown"
+        }
     val framesPerSecond =
         details?.let {
             if (it.frameRateDenominator > 0) {
@@ -115,6 +122,23 @@ internal fun PlaybackDiagnostics(
         )
         Text(
             text =
+                "Video: ${formatDiagnosticRate(videoDiagnostics.receivedFps)} in • " +
+                    "${formatDiagnosticRate(videoDiagnostics.renderedFps)} out • " +
+                    "Dropped: ${videoDiagnostics.droppedFrames}",
+            color = colors.secondaryText,
+            fontSize = 10.sp,
+            lineHeight = 11.sp,
+        )
+        Text(
+            text =
+                "Queue: ${videoDiagnostics.queueDepth} • " +
+                    "Process: ${formatDiagnosticRate(videoDiagnostics.processingTimeMs)} ms",
+            color = colors.secondaryText,
+            fontSize = 10.sp,
+            lineHeight = 11.sp,
+        )
+        Text(
+            text =
                 "Audio: ${audioDiagnostics.outputSampleRate / 1000} kHz " +
                     "${if (audioDiagnostics.outputChannelCount == 2) "stereo" else "mono"} • " +
                     "$audioText • Dropped: ${audioDiagnostics.droppedFrames} • " +
@@ -125,6 +149,8 @@ internal fun PlaybackDiagnostics(
         )
     }
 }
+
+private fun formatDiagnosticRate(value: Float): String = String.format(Locale.US, "%.1f", value.coerceAtLeast(0f))
 
 @Composable
 internal fun PlaybackStatePanel(

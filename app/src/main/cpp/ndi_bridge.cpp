@@ -40,6 +40,7 @@ jobject g_playback_listener = nullptr;
 jmethodID g_aspect_ratio_method = nullptr;
 jmethodID g_playback_state_method = nullptr;
 jmethodID g_ptz_support_method = nullptr;
+jmethodID g_video_diagnostics_method = nullptr;
 JavaVM* g_java_vm = nullptr;
 std::thread g_receive_thread;
 std::atomic_bool g_receiving = false;
@@ -181,6 +182,37 @@ void notify_ptz_support(
     last_support_state = support_state;
 }
 
+void notify_video_diagnostics(
+    JNIEnv* env,
+    jobject listener,
+    jmethodID method,
+    int64_t total_frames,
+    int64_t dropped_frames,
+    int width,
+    int height,
+    int queue_depth,
+    float received_fps,
+    float rendered_fps,
+    float processing_time_ms
+) {
+    env->CallVoidMethod(
+        listener,
+        method,
+        static_cast<jlong>(total_frames),
+        static_cast<jlong>(dropped_frames),
+        static_cast<jint>(width),
+        static_cast<jint>(height),
+        static_cast<jint>(queue_depth),
+        static_cast<jfloat>(received_fps),
+        static_cast<jfloat>(rendered_fps),
+        static_cast<jfloat>(processing_time_ms)
+    );
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        log_error("The video-diagnostics callback failed");
+    }
+}
+
 void receive_loop(
     NDIlib_recv_instance_t receiver,
     ANativeWindow* window,
@@ -189,6 +221,7 @@ void receive_loop(
     jmethodID aspect_ratio_method,
     jmethodID playback_state_method,
     jmethodID ptz_support_method,
+    jmethodID video_diagnostics_method,
     bool automatic_bandwidth
 ) {
     JNIEnv* env = nullptr;
@@ -206,6 +239,12 @@ void receive_loop(
     int last_ptz_support_state = -1;
     bool automatic_fallback_active = false;
     auto last_video_time = std::chrono::steady_clock::now();
+    auto last_diagnostics_time = last_video_time;
+    int last_video_width = 0;
+    int last_video_height = 0;
+    int64_t interval_received_frames = 0;
+    int64_t interval_rendered_frames = 0;
+    int64_t interval_processing_time_microseconds = 0;
     MediaCodecDecoder hx_decoder(window);
     notify_playback_state(
         env,
@@ -222,6 +261,44 @@ void receive_loop(
         last_ptz_support_state
     );
     while (g_receiving.load()) {
+        const auto publish_diagnostics = [&]() {
+            const auto now = std::chrono::steady_clock::now();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - last_diagnostics_time
+            ).count();
+            if (elapsed < 1000) return;
+
+            NDIlib_recv_performance_t total{};
+            NDIlib_recv_performance_t dropped{};
+            NDIlib_recv_queue_t queue{};
+            NDIlib_recv_get_performance(receiver, &total, &dropped);
+            NDIlib_recv_get_queue(receiver, &queue);
+            const float elapsed_seconds = static_cast<float>(elapsed) / 1000.0f;
+            const float received_fps = static_cast<float>(interval_received_frames) / elapsed_seconds;
+            const float rendered_fps = static_cast<float>(interval_rendered_frames) / elapsed_seconds;
+            const float processing_time_ms = interval_received_frames > 0
+                ? static_cast<float>(interval_processing_time_microseconds) /
+                    static_cast<float>(interval_received_frames) / 1000.0f
+                : 0.0f;
+            notify_video_diagnostics(
+                env,
+                aspect_ratio_listener,
+                video_diagnostics_method,
+                total.video_frames,
+                dropped.video_frames,
+                last_video_width,
+                last_video_height,
+                queue.video_frames,
+                received_fps,
+                rendered_fps,
+                processing_time_ms
+            );
+            interval_received_frames = 0;
+            interval_rendered_frames = 0;
+            interval_processing_time_microseconds = 0;
+            last_diagnostics_time = now;
+        };
+        publish_diagnostics();
         NDIlib_video_frame_v2_t video{};
         const NDIlib_frame_type_e type = NDIlib_recv_capture_v3(
             receiver,
@@ -246,7 +323,11 @@ void receive_loop(
             }
 
             bool terminal_playback_error = false;
-            last_video_time = std::chrono::steady_clock::now();
+            const auto processing_started = std::chrono::steady_clock::now();
+            interval_received_frames++;
+            last_video_width = video.xres;
+            last_video_height = video.yres;
+            last_video_time = processing_started;
             const float aspect_ratio = video.picture_aspect_ratio > 0.0f
                 ? video.picture_aspect_ratio
                 : static_cast<float>(video.xres) / static_cast<float>(video.yres);
@@ -260,6 +341,7 @@ void receive_loop(
             }
             if (is_hx_video(video)) {
                 const DecodeResult decode_result = hx_decoder.submit(video);
+                interval_rendered_frames += hx_decoder.takeRenderedFrameCount();
                 if (decode_result == DecodeResult::WaitingForKeyframe) {
                     notify_playback_state(
                         env,
@@ -299,8 +381,12 @@ void receive_loop(
                     state,
                     last_playback_state
                 );
+                if (render_result == RenderResult::Rendered) interval_rendered_frames++;
                 terminal_playback_error = render_result != RenderResult::Rendered;
             }
+            interval_processing_time_microseconds += std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - processing_started
+            ).count();
             NDIlib_recv_free_video_v2(receiver, &video);
             if (terminal_playback_error) break;
         } else if (type == NDIlib_frame_type_status_change) {
@@ -390,6 +476,7 @@ void stop_receiver_locked(JNIEnv* env) {
     g_aspect_ratio_method = nullptr;
     g_playback_state_method = nullptr;
     g_ptz_support_method = nullptr;
+    g_video_diagnostics_method = nullptr;
     g_java_vm = nullptr;
 }
 
@@ -586,9 +673,15 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         "onPtzSupportChanged",
         "(Z)V"
     );
+    g_video_diagnostics_method = env->GetMethodID(
+        listener_class,
+        "onVideoDiagnosticsChanged",
+        "(JJIIIFFF)V"
+    );
     env->DeleteLocalRef(listener_class);
     if (g_aspect_ratio_method == nullptr || g_playback_state_method == nullptr ||
-        g_ptz_support_method == nullptr || env->GetJavaVM(&g_java_vm) != JNI_OK) {
+        g_ptz_support_method == nullptr || g_video_diagnostics_method == nullptr ||
+        env->GetJavaVM(&g_java_vm) != JNI_OK) {
         if (env->ExceptionCheck()) env->ExceptionClear();
         NDIlib_recv_destroy(g_receiver);
         g_receiver = nullptr;
@@ -597,6 +690,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_aspect_ratio_method = nullptr;
         g_playback_state_method = nullptr;
         g_ptz_support_method = nullptr;
+        g_video_diagnostics_method = nullptr;
         g_java_vm = nullptr;
         log_error("Could not prepare the playback callbacks");
         return JNI_FALSE;
@@ -610,6 +704,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_aspect_ratio_method = nullptr;
         g_playback_state_method = nullptr;
         g_ptz_support_method = nullptr;
+        g_video_diagnostics_method = nullptr;
         g_java_vm = nullptr;
         return JNI_FALSE;
     }
@@ -635,6 +730,7 @@ Java_com_adriant_networkstreamviewer_data_ndi_NdiNative_startReceiver(
         g_aspect_ratio_method,
         g_playback_state_method,
         g_ptz_support_method,
+        g_video_diagnostics_method,
         bandwidth == 0
     );
     return JNI_TRUE;

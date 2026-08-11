@@ -40,6 +40,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
 import com.adriant.networkstreamviewer.domain.model.NdiSource
+import com.adriant.networkstreamviewer.domain.model.NdiVideoDiagnostics
 import com.adriant.networkstreamviewer.domain.model.isDeveloperExample
 import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
 import kotlinx.coroutines.launch
@@ -67,6 +68,15 @@ fun PlayerScreen(
     var playbackState by remember(source, bandwidth) {
         mutableStateOf(
             if (isDeveloperExample) NdiPlaybackState.PLAYING else NdiPlaybackState.CONNECTING,
+        )
+    }
+    var videoDiagnostics by remember(source, bandwidth) {
+        mutableStateOf(
+            if (isDeveloperExample) {
+                NdiVideoDiagnostics(receivedFps = 30f, renderedFps = 30f, processingTimeMs = 4.2f)
+            } else {
+                NdiVideoDiagnostics()
+            },
         )
     }
     var retryGeneration by remember(source, bandwidth) { mutableIntStateOf(0) }
@@ -139,6 +149,9 @@ fun PlayerScreen(
                                     playerController = playerController,
                                     onAspectRatioChanged = { ratio ->
                                         post { videoAspectRatio = ratio }
+                                    },
+                                    onVideoDiagnosticsChanged = { value ->
+                                        post { videoDiagnostics = value }
                                     },
                                     onPlaybackStateChanged = { state ->
                                         post {
@@ -234,6 +247,7 @@ fun PlayerScreen(
                 automaticFallbackToLow = automaticFallbackToLow,
                 playbackState = playbackState,
                 isDeveloperExample = isDeveloperExample,
+                videoDiagnostics = videoDiagnostics,
                 audioDiagnostics = audioDiagnostics,
                 modifier =
                     Modifier

@@ -5,7 +5,6 @@ enum class AppTheme(
 ) {
     SYSTEM("System"),
     LIGHT("Light"),
-    DARK("Dark"),
     AMOLED("AMOLED"),
 }
 

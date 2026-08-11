@@ -4,7 +4,6 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -12,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.adriant.networkstreamviewer.domain.model.AppTheme
 
-private val DarkColorScheme =
+private val AmoledBaseColorScheme =
     darkColorScheme(
         primary = NdiDarkCyan,
         onPrimary = Color(0xFF003640),
@@ -55,7 +54,7 @@ private val LightColorScheme =
     )
 
 private val AmoledColorScheme =
-    DarkColorScheme.copy(
+    AmoledBaseColorScheme.copy(
         background = Color.Black,
         surface = Color.Black,
         surfaceVariant = Color(0xFF0B0B14),
@@ -78,17 +77,15 @@ fun NetworkStreamViewerTheme(
         when (appTheme) {
             AppTheme.SYSTEM -> isSystemInDarkTheme()
             AppTheme.LIGHT -> false
-            AppTheme.DARK, AppTheme.AMOLED -> true
+            AppTheme.AMOLED -> true
         }
     val colorScheme =
         when {
-            appTheme == AppTheme.AMOLED -> AmoledColorScheme
+            darkTheme -> AmoledColorScheme
             dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                dynamicLightColorScheme(LocalContext.current)
             }
 
-            darkTheme -> DarkColorScheme
             else -> LightColorScheme
         }
 

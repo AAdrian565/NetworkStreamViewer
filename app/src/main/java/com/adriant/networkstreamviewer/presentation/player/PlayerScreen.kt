@@ -1,16 +1,17 @@
 package com.adriant.networkstreamviewer.presentation.player
 
 import android.view.SurfaceView
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -39,6 +41,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiPtzCommandResult
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.isDeveloperExample
+import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
 import kotlinx.coroutines.launch
 
 private const val DEFAULT_VIDEO_ASPECT_RATIO = 16f / 9f
@@ -54,6 +57,7 @@ fun PlayerScreen(
 ) {
     ImmersiveSystemBarsEffect()
     KeepScreenAwakeEffect(enabled = keepScreenAwake)
+    val colors = ndiMonitorColors()
     val isDeveloperExample = source.isDeveloperExample
     var videoAspectRatio by remember(source) {
         mutableFloatStateOf(DEFAULT_VIDEO_ASPECT_RATIO)
@@ -184,13 +188,13 @@ fun PlayerScreen(
             )
         }
 
-        SmallFloatingActionButton(
+        PlayerOverlayButton(
+            contentDescription = "Back to source list",
             onClick = onBack,
             modifier =
                 Modifier
                     .align(Alignment.TopStart)
-                    .padding(16.dp)
-                    .semantics { contentDescription = "Back to source list" },
+                    .padding(16.dp),
         ) {
             CenteredBackArrow()
         }
@@ -198,30 +202,26 @@ fun PlayerScreen(
         if (!isPtzOverlayVisible && !isPlaybackOverlayVisible) {
             Column(
                 horizontalAlignment = Alignment.End,
+                verticalArrangement =
+                    androidx.compose.foundation.layout.Arrangement
+                        .spacedBy(10.dp),
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
                         .padding(16.dp),
             ) {
-                SmallFloatingActionButton(
+                PlayerOverlayButton(
+                    contentDescription = "Show playback controls",
                     onClick = { isPlaybackOverlayVisible = true },
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = "Show playback controls"
-                        },
                 ) {
-                    PlaybackControlsIcon(Modifier.size(24.dp))
+                    PlaybackControlsIcon(Modifier.size(22.dp))
                 }
                 if (isPtzSupported) {
-                    Spacer(Modifier.size(8.dp))
-                    SmallFloatingActionButton(
+                    PlayerOverlayButton(
+                        contentDescription = "Show PTZ controls",
                         onClick = { isPtzOverlayVisible = true },
-                        modifier =
-                            Modifier.semantics {
-                                contentDescription = "Show PTZ controls"
-                            },
                     ) {
-                        PtzControlsIcon(Modifier.size(24.dp))
+                        PtzControlsIcon(Modifier.size(22.dp))
                     }
                 }
             }
@@ -237,8 +237,8 @@ fun PlayerScreen(
                 audioDiagnostics = audioDiagnostics,
                 modifier =
                     Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp),
+                        .align(Alignment.TopStart)
+                        .padding(start = 70.dp, top = 16.dp, end = 16.dp),
             )
         }
 
@@ -251,6 +251,16 @@ fun PlayerScreen(
                     Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),
+            )
+        }
+
+        if (isPlaybackOverlayVisible) {
+            BackHandler { isPlaybackOverlayVisible = false }
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clickable { isPlaybackOverlayVisible = false },
             )
         }
 
@@ -341,19 +351,22 @@ fun PlayerScreen(
         )
 
         ptzStatusMessage?.let { message ->
-            Surface(
-                color = Color.Black.copy(alpha = 0.84f),
-                contentColor = Color.White,
-                shape =
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(12.dp),
+            val statusShape = RoundedCornerShape(12.dp)
+            Box(
                 modifier =
                     Modifier
                         .align(Alignment.BottomStart)
                         .padding(16.dp)
+                        .clip(statusShape)
+                        .background(colors.sourceUpper.copy(alpha = 0.94f))
+                        .border(1.dp, colors.border, statusShape)
                         .semantics { contentDescription = "PTZ command status" },
             ) {
-                Text(message, modifier = Modifier.padding(12.dp))
+                Text(
+                    message,
+                    color = colors.primaryText,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                )
             }
         }
     }

@@ -27,6 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -49,6 +54,7 @@ import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.NdiStreamDetails
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
 import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
+import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
@@ -226,6 +232,19 @@ fun SourceListHeader(
     onScan: () -> Unit,
 ) {
     val colors = ndiMonitorColors()
+    var scanningDotCount by remember { mutableIntStateOf(1) }
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            var nextDotCount = 1
+            while (true) {
+                scanningDotCount = nextDotCount
+                nextDotCount = nextDotCount % 3 + 1
+                delay(400)
+            }
+        } else {
+            scanningDotCount = 1
+        }
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -256,7 +275,7 @@ fun SourceListHeader(
         }
         Spacer(Modifier.weight(1f))
         Text(
-            text = if (isRefreshing) "SCANNING" else "SCAN",
+            text = if (isRefreshing) "SCANNING${".".repeat(scanningDotCount)}" else "SCAN",
             color = colors.accent,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,

@@ -1,20 +1,24 @@
 package com.adriant.networkstreamviewer.presentation.player
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -23,13 +27,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.adriant.networkstreamviewer.domain.model.NdiAudioDiagnostics
 import com.adriant.networkstreamviewer.domain.model.NdiAudioStatus
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
 import com.adriant.networkstreamviewer.domain.model.NdiPlaybackState
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
+import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
 import java.util.Locale
 
 @Composable
@@ -79,32 +86,43 @@ internal fun PlaybackDiagnostics(
         }
     val connectionText = if (isDeveloperExample) "Playing (simulated)" else playbackState.label
 
-    Surface(
-        color = Color.Black.copy(alpha = 0.78f),
-        contentColor = Color.White,
-        shape =
-            androidx.compose.foundation.shape
-                .RoundedCornerShape(12.dp),
-        modifier = modifier.semantics { contentDescription = "Playback diagnostics" },
+    val colors = ndiMonitorColors()
+    val audioText =
+        when (audioDiagnostics.status) {
+            NdiAudioStatus.STARTING -> "Starting"
+            NdiAudioStatus.PLAYING -> "Playing"
+            NdiAudioStatus.NO_SIGNAL -> "No signal"
+            NdiAudioStatus.FOCUS_LOST -> "Focus lost"
+            NdiAudioStatus.OUTPUT_FAILURE -> "Output failure"
+        }
+    Column(
+        modifier =
+            modifier
+                .semantics { contentDescription = "Playback diagnostics" }
+                .padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Text("Codec: $codec • $resolution • $framesPerSecond FPS")
-            Text("Bandwidth: $bandwidthText • State: $connectionText")
-            val audioText =
-                when (audioDiagnostics.status) {
-                    NdiAudioStatus.STARTING -> "Starting"
-                    NdiAudioStatus.PLAYING -> "Playing"
-                    NdiAudioStatus.NO_SIGNAL -> "No signal"
-                    NdiAudioStatus.FOCUS_LOST -> "Focus lost"
-                    NdiAudioStatus.OUTPUT_FAILURE -> "Output failure"
-                }
-            Text(
+        Text(
+            text = "Codec: $codec • $resolution • $framesPerSecond FPS",
+            color = colors.primaryText,
+            fontSize = 11.sp,
+            lineHeight = 12.sp,
+        )
+        Text(
+            text = "Bandwidth: $bandwidthText • State: $connectionText",
+            color = colors.secondaryText,
+            fontSize = 11.sp,
+            lineHeight = 12.sp,
+        )
+        Text(
+            text =
                 "Audio: ${audioDiagnostics.outputSampleRate / 1000} kHz " +
                     "${if (audioDiagnostics.outputChannelCount == 2) "stereo" else "mono"} • " +
                     "$audioText • Dropped: ${audioDiagnostics.droppedFrames} • " +
                     "Underruns: ${audioDiagnostics.underrunCount}",
-            )
-        }
+            color = colors.secondaryText,
+            fontSize = 10.sp,
+            lineHeight = 11.sp,
+        )
     }
 }
 
@@ -137,28 +155,37 @@ internal fun PlaybackStatePanel(
             NdiPlaybackState.PLAYING -> ""
         }
 
-    Surface(
-        color = Color.Black.copy(alpha = 0.78f),
-        contentColor = Color.White,
-        shape =
-            androidx.compose.foundation.shape
-                .RoundedCornerShape(16.dp),
-        modifier = Modifier.widthIn(max = 380.dp).padding(24.dp),
+    val colors = ndiMonitorColors()
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier =
+            Modifier
+                .widthIn(max = 380.dp)
+                .padding(24.dp)
+                .clip(shape)
+                .background(colors.sourceUpper.copy(alpha = 0.94f))
+                .border(1.dp, colors.border, shape)
+                .padding(24.dp),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp),
-        ) {
-            if (isProgress) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(32.dp))
-                Spacer(Modifier.size(16.dp))
-            }
-            Text(title)
-            Spacer(Modifier.size(8.dp))
-            Text(detail, color = Color.White.copy(alpha = 0.8f))
-            if (!isProgress) {
-                Spacer(Modifier.size(16.dp))
-                Button(onClick = onRetry) { Text("Retry") }
+        if (isProgress) {
+            CircularProgressIndicator(color = colors.accent, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.size(16.dp))
+        }
+        Text(title, color = colors.primaryText, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.size(8.dp))
+        Text(detail, color = colors.secondaryText)
+        if (!isProgress) {
+            Spacer(Modifier.size(16.dp))
+            Button(
+                onClick = onRetry,
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = Color(0xFF003640),
+                    ),
+            ) {
+                Text("Retry", fontWeight = FontWeight.Bold)
             }
         }
     }

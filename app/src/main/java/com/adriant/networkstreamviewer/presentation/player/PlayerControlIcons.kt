@@ -10,6 +10,31 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 @Composable
+internal fun CloseIcon(
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = LocalContentColor.current,
+) {
+    Canvas(modifier = modifier) {
+        val inset = size.minDimension * 0.22f
+        val strokeWidth = 1.8.dp.toPx()
+        drawLine(
+            color = color,
+            start = Offset(inset, inset),
+            end = Offset(size.width - inset, size.height - inset),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = color,
+            start = Offset(size.width - inset, inset),
+            end = Offset(inset, size.height - inset),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
+@Composable
 internal fun PlaybackControlsIcon(modifier: Modifier = Modifier) {
     val color = LocalContentColor.current
     Canvas(modifier = modifier) {

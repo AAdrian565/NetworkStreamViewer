@@ -1,6 +1,7 @@
 package com.adriant.networkstreamviewer.presentation
 
 import com.adriant.networkstreamviewer.domain.model.AppSettings
+import com.adriant.networkstreamviewer.domain.model.AppTheme
 import com.adriant.networkstreamviewer.domain.model.DEVELOPER_SOURCE_URL
 import com.adriant.networkstreamviewer.domain.model.DiscoveryRefreshInterval
 import com.adriant.networkstreamviewer.domain.model.NdiBandwidth
@@ -22,6 +23,12 @@ class NdiUiStateSettingsTest {
         assertEquals(1, state.displayedSources.size)
         assertEquals(DEVELOPER_SOURCE_URL, state.displayedSources.single().url)
         assertEquals("1 source found", state.statusMessage)
+    }
+
+    @Test
+    fun `amoled replaces the normal dark theme`() {
+        assertEquals(listOf(AppTheme.SYSTEM, AppTheme.LIGHT, AppTheme.AMOLED), AppTheme.entries)
+        assertEquals(AppTheme.AMOLED, AppSettings().theme)
     }
 
     @Test

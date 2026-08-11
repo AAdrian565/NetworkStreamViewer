@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -38,7 +37,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -50,51 +48,13 @@ import androidx.compose.ui.unit.sp
 import com.adriant.networkstreamviewer.domain.model.NdiSource
 import com.adriant.networkstreamviewer.domain.model.NdiStreamDetails
 import com.adriant.networkstreamviewer.domain.model.NdiVideoFormat
+import com.adriant.networkstreamviewer.ui.theme.ndiMonitorColors
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
-
-private data class NdiMonitorColors(
-    val background: Color,
-    val topBar: Color,
-    val sourceUpper: Color,
-    val sourceLower: Color,
-    val border: Color,
-    val primaryText: Color,
-    val secondaryText: Color,
-    val metadataText: Color,
-    val metadataLabel: Color,
-    val accent: Color,
-    val online: Color,
-    val offline: Color,
-    val countBadge: Color,
-    val settingsButton: Color,
-)
-
-@Composable
-private fun ndiMonitorColors(): NdiMonitorColors {
-    val scheme = MaterialTheme.colorScheme
-    val isLight = scheme.background.luminance() > 0.5f
-    return NdiMonitorColors(
-        background = scheme.background,
-        topBar = scheme.surface,
-        sourceUpper = scheme.surfaceVariant,
-        sourceLower = scheme.surfaceContainerLow,
-        border = scheme.outlineVariant,
-        primaryText = scheme.onSurface,
-        secondaryText = scheme.onSurfaceVariant,
-        metadataText = scheme.onSurface,
-        metadataLabel = scheme.onSurfaceVariant.copy(alpha = if (isLight) 0.72f else 0.78f),
-        accent = scheme.primary,
-        online = if (isLight) Color(0xFF16864A) else Color(0xFF45D17C),
-        offline = if (isLight) Color(0xFFC63847) else Color(0xFFF15F6B),
-        countBadge = if (isLight) Color(0xFFDCEAF7) else Color(0xFF172C4A),
-        settingsButton = if (isLight) scheme.surfaceVariant else Color(0xFF181827),
-    )
-}
 
 /** The deliberately custom-styled source browser shown on the app home screen. */
 @Composable

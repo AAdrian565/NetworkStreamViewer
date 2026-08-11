@@ -32,8 +32,8 @@ class NdiUiStateSettingsTest {
     }
 
     @Test
-    fun `automatic quality is the default playback quality`() {
-        assertEquals(NdiBandwidth.AUTOMATIC, AppSettings().defaultBandwidth)
+    fun `preview quality is the default playback quality`() {
+        assertEquals(NdiBandwidth.LOWEST, AppSettings().defaultBandwidth)
     }
 
     @Test

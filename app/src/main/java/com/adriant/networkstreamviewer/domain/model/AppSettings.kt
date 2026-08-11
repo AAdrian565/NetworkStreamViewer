@@ -5,7 +5,7 @@ enum class AppTheme(
 ) {
     SYSTEM("System"),
     LIGHT("Light"),
-    AMOLED("AMOLED"),
+    AMOLED("Dark"),
 }
 
 enum class DiscoveryRefreshInterval(
@@ -20,7 +20,7 @@ enum class DiscoveryRefreshInterval(
 
 data class AppSettings(
     val theme: AppTheme = AppTheme.AMOLED,
-    val defaultBandwidth: NdiBandwidth = NdiBandwidth.AUTOMATIC,
+    val defaultBandwidth: NdiBandwidth = NdiBandwidth.LOWEST,
     val keepScreenAwake: Boolean = true,
     val showPlaybackDiagnostics: Boolean = false,
     val developerMode: Boolean = false,

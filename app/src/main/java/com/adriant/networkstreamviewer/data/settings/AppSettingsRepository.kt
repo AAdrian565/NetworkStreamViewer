@@ -51,7 +51,7 @@ class AppSettingsRepository(
             defaultBandwidth =
                 enumValueOrDefault(
                     getString(KEY_DEFAULT_BANDWIDTH, null),
-                    NdiBandwidth.AUTOMATIC,
+                    NdiBandwidth.LOWEST,
                 ),
             keepScreenAwake = getBoolean(KEY_KEEP_SCREEN_AWAKE, true),
             showPlaybackDiagnostics = getBoolean(KEY_SHOW_PLAYBACK_DIAGNOSTICS, false),
